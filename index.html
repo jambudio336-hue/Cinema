@@ -478,6 +478,7 @@ html[data-theme="light"] #nav{background:rgba(255,255,255,.95)}
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
         <input id="exploreInput" placeholder="Cari judul drama..." autocomplete="off">
       </div>
+      <div style="padding:0 16px 12px"><select id="providerSelect" aria-label="Pilih provider" style="width:100%;padding:13px 14px;border-radius:13px;border:1px solid var(--line);background:var(--card);color:var(--tx);font:inherit;font-weight:800"><option value="starshort">StarShort</option></select></div>
       <div class="chips" id="chips"></div>
       <div id="exploreBody"></div>
     </section>
@@ -583,7 +584,7 @@ const $$ = (s,r)=> Array.from((r||document).querySelectorAll(s));
 
 const S = {
   view:"feed", theme:"dark", autoplay:true, quality:"auto", showCont:true, dubOnly:false,
-  lang:"id", user:null, feedOffset:0, feedLoading:false, feedDone:false, feedLastSync:0,
+  lang:"id", user:null, provider:"starshort", feedOffset:0, feedLoading:false, feedDone:false, feedLastSync:0,
   favs:[], hist:[], dls:[], sHist:[], searchTimer:null, progressTimer:0, pool:[],
   playerMode:"", inApp:NATIVE
 };
@@ -603,13 +604,14 @@ function loadUserData(){
   if(typeof st.showCont === "boolean") S.showCont = st.showCont;
   if(typeof st.dubOnly === "boolean") S.dubOnly = st.dubOnly;
   if(st.lang) S.lang = st.lang;
+  if(st.provider && PROVIDERS.includes(st.provider)) S.provider = st.provider;
   if(st.playerMode) S.playerMode = st.playerMode;
   if(!S.playerMode) S.playerMode = NATIVE ? "native" : "custom";
   document.documentElement.dataset.theme = S.theme;
 }
 function saveSet(){
   localStorage.setItem(K("set"), JSON.stringify({theme:S.theme,autoplay:S.autoplay,quality:S.quality,
-    showCont:S.showCont,dubOnly:S.dubOnly,lang:S.lang,playerMode:S.playerMode}));
+    showCont:S.showCont,dubOnly:S.dubOnly,lang:S.lang,playerMode:S.playerMode,provider:S.provider}));
 }
 const saveFav  = ()=> localStorage.setItem(K("fav"),  JSON.stringify(S.favs.slice(0,400)));
 const saveHist = ()=> localStorage.setItem(K("hist"), JSON.stringify(S.hist.slice(0,150)));
@@ -836,8 +838,8 @@ function injectContinueCard(){
     '</div>';
   card.addEventListener("click", ev=>{
     const b = ev.target.closest("[data-act]"); if(!b) return;
-    if(b.dataset.act === "resume") openDetail(h.id, h.ep, h.t || 0);
-    if(b.dataset.act === "open") openDetail(h.id);
+    if(b.dataset.act === "resume") openDetail(h.id, h.ep, h.t || 0, h.provider);
+    if(b.dataset.act === "open") openDetail(h.id,0,0,h.provider);
   });
   $("#feedList").prepend(card);
 }
@@ -864,7 +866,7 @@ function feedCard(it, idx){
   d.addEventListener("click", ev=>{
     const b = ev.target.closest("[data-act]"); if(!b) return;
     ev.stopPropagation();
-    if(b.dataset.act === "open") openDetail(it.id);
+    if(b.dataset.act === "open") openDetail(it.id,0,0,it.source);
     if(b.dataset.act === "fav") toggleFav(it, b);
     if(b.dataset.act === "share") shareItem(it);
   });
@@ -886,7 +888,7 @@ function updateContBar(){
 function toggleFav(it, btn){
   const i = S.favs.findIndex(f=> f.id === it.id);
   if(i >= 0){ S.favs.splice(i,1); toast("Dihapus dari favorit"); btn && btn.classList.remove("on"); }
-  else { S.favs.unshift({id:it.id, name:it.name || it.title, cover:it.cover, episodes:it.episodes});
+  else { S.favs.unshift({id:it.id, source:it.source||S.provider, name:it.name || it.title, cover:it.cover, episodes:it.episodes});
     toast("Ditambahkan ke favorit"); btn && btn.classList.add("on"); }
   saveFav();
   if(S.view === "fav") renderFavs();
@@ -905,7 +907,7 @@ function renderFavs(){
 function pushHist(d, ep, t, dur){
   const pct = dur ? Math.min(99, Math.round(t/dur*100)) : 0;
   S.hist = S.hist.filter(h=> h.id !== d.id);
-  S.hist.unshift({id:d.id, name:d.title, cover:d.cover, episodes:d.episodes,
+  S.hist.unshift({id:d.id, provider:d.source||S.provider, name:d.title, cover:d.cover, episodes:d.episodes,
     ep:ep, t:t||0, dur:dur||0, pct:pct, ts:Date.now()});
   saveHist();
 }
@@ -917,11 +919,11 @@ function renderHist(){
     return;
   }
   box.innerHTML = '<div class="grid">' + S.hist.map(h=>
-    posterHTML({id:h.id,name:h.name,cover:h.cover,episodes:h.episodes,tag:"Ep "+h.ep,pct:h.pct})).join("") + '</div>';
+    posterHTML({id:h.id,source:h.provider,name:h.name,cover:h.cover,episodes:h.episodes,tag:"Ep "+h.ep,pct:h.pct})).join("") + '</div>';
   bindCards(box);
 }
 function posterHTML(it, rank){
-  return '<button class="pcard" data-id="' + esc(it.id) + '"><div class="ph">' +
+  return '<button class="pcard" data-id="' + esc(it.id) + '" data-provider="' + esc(it.source||S.provider) + '"><div class="ph">' +
     (rank ? '<span class="rk">' + rank + '</span>' : '') +
     (isDub(it.name) ? '<span class="dubb">DUB</span>' : '') +
     '<img loading="lazy" alt="" src="' + esc(it.cover||"") + '" onerror="this.classList.add(\'err\')">' +
@@ -929,11 +931,17 @@ function posterHTML(it, rank){
     (it.pct ? '<span class="pbar"><i style="width:' + it.pct + '%"></i></span>' : '') +
     '</div><h4>' + esc(it.name) + '</h4><small>' + (it.author ? esc(it.author) : "Drama Pendek") + '</small></button>';
 }
-function bindCards(root){ $$(".pcard", root).forEach(c=> c.addEventListener("click", ()=> openDetail(c.dataset.id))); }
+function bindCards(root){ $(".pcard", root).forEach(c=> c.addEventListener("click", ()=> openDetail(c.dataset.id,0,0,c.dataset.provider))); }
 
 const CATS = ["Cinta","CEO","Nikah","Balas Dendam","Reinkarnasi","Miskin","Kontrak","Selir","Pewaris","Taipan"];
 function initExplore(){
   $("#exploreBody").dataset.init = "1";
+  const providerSelect=$("#providerSelect");
+  if(providerSelect){
+    providerSelect.innerHTML=PROVIDERS.map(p=>'<option value="'+p+'">'+p.replace(/(^|[-_])([a-z])/g,(_,a,b)=>a+b.toUpperCase())+'</option>').join("");
+    providerSelect.value=S.provider;
+    providerSelect.onchange=()=>{S.provider=providerSelect.value;saveSet();loadTop10();};
+  }
   $("#chips").innerHTML = '<button class="chip dub" data-q="__dub">🔊 Dub Indo</button>' +
     CATS.map((c,i)=> '<button class="chip' + (i===0?" on":"") + '" data-q="' + esc(c) + '">' + esc(c) + '</button>').join("");
   $$("#chips .chip").forEach(ch=> ch.addEventListener("click", ()=>{
@@ -1021,7 +1029,8 @@ async function doSearch(q){
 
 let detailData = null, pendingEp = 0, pendingSeek = 0;
 
-async function openDetail(id, ep, seek){
+async function openDetail(id, ep, seek, provider){
+  if(provider && PROVIDERS.includes(provider)) S.provider = provider;
   pendingEp = ep || 0; pendingSeek = seek || 0;
   const d = $("#detail");
   d.classList.add("open"); d.scrollTop = 0;
