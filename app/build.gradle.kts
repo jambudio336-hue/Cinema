@@ -11,9 +11,9 @@ android {
         applicationId = "com.mazkiplay.cinema"
         minSdk = 23
         targetSdk = 35
-        versionCode = 80
-        versionName = "8.0"
-        resValue("string", "build_version", "8.0")
+        versionCode = 81
+        versionName = "8.1"
+        resValue("string", "build_version", "8.1")
     }
 
     buildFeatures { buildConfig = true }
