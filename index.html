@@ -568,16 +568,15 @@ html[data-theme="light"] #nav{background:rgba(255,255,255,.95)}
 (function(){
 "use strict";
 
-const API  = "https://melolo.goodbos.online/api";
+const API_PROXY = "https://m4zkiplay-cinema-api-mazkiplays-projects.vercel.app/api/drama";
 const WA_NUM = "6285262965282";
 const WEB_BASE = "https://jambudio336-hue.github.io/Cinema/";
 const K_USERS = "mz_users", K_SESS = "mz_session";
-const VERSION = "8.4";
+const VERSION = "8.5";
 const NATIVE = /M4zk1pL4yCinema/.test(navigator.userAgent);
 const BR = window.AndroidBridge || null;
 const HAS = k => !!(BR && typeof BR[k] === "function");
-// Token disuntikkan saat build melalui GitHub Actions Secret, tidak disimpan di source HTML.
-const CODE = HAS("meloloToken") ? String(BR.meloloToken() || "").trim() : "";
+const PROVIDERS = ["starshort","dramabox","shortmax","reelshort","flickreels","melolo","flexTV".toLowerCase(),"dramabite","freereels","fundrama","microdrama","vigloo","dramawave","netshort","idrama","goodshort","velolo","stardusttv","serialplus","dotdrama","rapidtv","shortswave","dramanova","cubetv","reelbuzz","flareflow","moboreels","happyshort","reelife","pinedrama","reelala","anyreel","raptdrama","bonustv","minitv","golddrama","joyreels","kalostv","vibeshort","bilitv","iqiyi","bstation"];
 
 const $  = (s,r)=> (r||document).querySelector(s);
 const $$ = (s,r)=> Array.from((r||document).querySelectorAll(s));
@@ -680,34 +679,79 @@ function toast(msg){
 const fmtDur = s => { s = Math.max(0, Math.floor(s||0)); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); };
 const isDub = n => /\(dub\)/i.test(n || "");
 
-/* ---------- API layer ---------- */
-const PROXIES = [
-  u => u,
-  u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
-  u => "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(u),
-  u => "https://corsproxy.io/?" + encodeURIComponent(u)
-];
-const withTimeout = (p,ms)=> Promise.race([p, new Promise((_,r)=> setTimeout(()=> r(new Error("t")), ms))]);
-
-async function api(path, params){
-  if((path === "/home" || path.startsWith("/detail/") || path === "/video") && !CODE) throw new Error("token_missing");
-  const qs = params ? "?" + new URLSearchParams(params).toString() : "";
-  const url = API + path + qs;
-  const tries = PROXIES.map(p => (async () => {
-    const r = await withTimeout(fetch(p(url), {headers:{"Accept":"application/json"}}), 7000);
-    if(!r.ok) throw new Error("http " + r.status);
-    const j = JSON.parse(await r.text());
-    if(!j || (j.code !== 0 && j.code !== 200)) throw new Error("api");
-    return j;
-  })());
-  try { return await Promise.any(tries); }
-  catch(e){ throw new Error("network"); }
+/* ---------- DramaBuzz API via private server-side proxy ---------- */
+const withTimeout = (p,ms)=> Promise.race([p, new Promise((_,r)=> setTimeout(()=> r(new Error("timeout")), ms))]);
+async function api(action, params){
+  const query = new URLSearchParams({action, provider:S.provider || "starshort", lang:S.lang || "id"});
+  Object.entries(params||{}).forEach(([k,v])=>{ if(v!==undefined && v!==null && v!=="") query.set(k,String(v)); });
+  const response = await withTimeout(fetch(API_PROXY + "?" + query.toString(), {headers:{Accept:"application/json"}}), 22000);
+  const raw = await response.text();
+  let json; try{ json=JSON.parse(raw); }catch(e){ throw new Error("Respons API bukan JSON"); }
+  if(!response.ok) throw new Error((json && (json.message||json.error)) || ("HTTP "+response.status));
+  return json;
 }
-
-const getHome   = off => api("/home", {lang:S.lang, offset:off, code:CODE});
-const getDetail = id  => api("/detail/" + encodeURIComponent(id), {lang:S.lang, code:CODE});
-const getSearch = q   => api("/search", {lang:S.lang, q:q}); // Endpoint search mengikuti dokumentasi: lang + q.
-const getVideo  = (dramaId, ep) => api("/video", {id:dramaId, ep:ep, code:CODE});
+const arrayFrom = value => {
+  if(Array.isArray(value)) return value;
+  if(!value || typeof value!=="object") return [];
+  for(const key of ["data","results","list","items","dramas","books","episodes","videos"]) {
+    if(Array.isArray(value[key])) return value[key];
+  }
+  for(const key of ["data","result","payload"]) if(value[key] && typeof value[key]==="object"){
+    const found=arrayFrom(value[key]); if(found.length) return found;
+  }
+  return [];
+};
+const objectFrom = value => {
+  if(!value || typeof value!=="object" || Array.isArray(value)) return {};
+  for(const key of ["data","result","drama","detail","payload"]) if(value[key] && typeof value[key]==="object" && !Array.isArray(value[key])) return objectFrom(value[key]);
+  return value;
+};
+const first = (o,keys,fallback="") => { for(const k of keys) if(o && o[k]!==undefined && o[k]!==null && o[k]!=="") return o[k]; return fallback; };
+function normalizeCard(x, provider){
+  const id=String(first(x,["id","code","bookId","dramaId","seriesId"],""));
+  return {id, source:provider, name:String(first(x,["title","name","bookName","dramaName"],"Drama")), title:String(first(x,["title","name","bookName","dramaName"],"Drama")),
+    cover:String(first(x,["cover","poster","thumbnail","image","coverUrl","verticalCover"],"")),
+    intro:String(first(x,["desc","description","intro","synopsis","summary"],"")),
+    episodes:Number(first(x,["episodes","totalEpisodes","episodeCount","total"],0))||0,
+    author:String(first(x,["author","actor","category","genre"],""))};
+}
+async function getHome(off){
+  let raw;
+  try { raw=await api("feed",{page:Math.floor((off||0)/10)+1}); }
+  catch(e){ raw=await api("search",{q:"drama",page:Math.floor((off||0)/10)+1}); }
+  return {data:arrayFrom(raw).map(x=>normalizeCard(x,S.provider)).filter(x=>x.id)};
+}
+async function getSearch(q){
+  const raw=await api("search",{q});
+  return {data:arrayFrom(raw).map(x=>normalizeCard(x,S.provider)).filter(x=>x.id)};
+}
+async function getDetail(id){
+  const [raw,epRaw]=await Promise.all([api("detail",{id}),api("episodes",{id})]);
+  const d=objectFrom(raw), eps=arrayFrom(epRaw);
+  const videos=eps.map((x,i)=>({episode:Number(first(x,["episode","number","ep","index"],i+1))||i+1,
+    duration:Number(first(x,["duration","durationSec","length"],0))||0,
+    title:String(first(x,["title","name"],"Episode "+(i+1))),
+    thumbnail:String(first(x,["thumbnail","cover","image"],""))})).sort((a,b)=>a.episode-b.episode);
+  const card=normalizeCard({...d,id:first(d,["id","code","dramaId"],id)},S.provider);
+  return {id:card.id,title:card.title,cover:card.cover,intro:card.intro,episodes:card.episodes||videos.length,videos,source:S.provider};
+}
+function findStreamUrls(value,out=[]){
+  if(!value || typeof value!=="object") return out;
+  if(Array.isArray(value)){ value.forEach(x=>findStreamUrls(x,out)); return out; }
+  const url=first(value,["url","hlsUrl","playUrl","videoUrl","src","m3u8"],"");
+  if(typeof url==="string" && /^https?:\/\//i.test(url)) out.push({label:String(first(value,["definition","quality","label","resolution"],"Auto")),url});
+  for(const [k,v] of Object.entries(value)) if(v && typeof v==="object") findStreamUrls(v,out);
+  return out;
+}
+async function getVideo(dramaId,ep){
+  const raw=await api("stream",{id:dramaId,ep});
+  const d=objectFrom(raw), found=findStreamUrls(raw);
+  const unique=[]; const seen=new Set();
+  found.forEach(x=>{if(!seen.has(x.url)){seen.add(x.url);unique.push({label:x.label,url:x.url});}});
+  const qualityList=unique.length?unique:[{label:"Auto",url:String(first(d,["hlsUrl","url","playUrl","videoUrl"],""))}].filter(x=>x.url);
+  if(!qualityList.length) throw new Error("API tidak mengembalikan URL stream. Periksa provider atau endpoint episode.");
+  return {qualityList};
+}
 
 /* ---------- nav ---------- */
 function go(view){
