@@ -13,7 +13,7 @@ android {
         targetSdk = 35
         versionCode = 80
         versionName = "8.0"
-        resValue("string", "build_version", versionName)
+        resValue("string", "build_version", "8.0")
     }
 
     buildFeatures { buildConfig = true }
