@@ -26,11 +26,6 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Install image tooling
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y imagemagick
-
       - name: Setup Gradle 8.9
         uses: gradle/actions/setup-gradle@v4
         with:
