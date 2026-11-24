@@ -453,6 +453,9 @@ html[data-theme="light"] #nav{background:rgba(255,255,255,.95)}
           <div class="brand-mark">M</div>
           <div class="brand-txt">M4zk1pL4y <span>Cinema</span></div>
         </div>
+        <button class="icon-btn" id="feedRefresh" aria-label="Perbarui katalog" title="Perbarui katalog">
+          <svg viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9A7 7 0 0118 6l2 6M4 12l2 6a7 7 0 0012.4-3"/></svg>
+        </button>
         <button class="icon-btn" id="feedRandom" aria-label="Acak">
           <svg viewBox="0 0 24 24"><path d="M4 6h4l8 12h4M16 6h4v4M16 18h4v-4M4 18h4"/></svg>
         </button>
@@ -570,7 +573,7 @@ const CODE = "947C4EDB6F923EAC1F55A8B5A73B3B65";
 const WA_NUM = "6285262965282";
 const WEB_BASE = "https://jambudio336-hue.github.io/Cinema/";
 const K_USERS = "mz_users", K_SESS = "mz_session";
-const VERSION = "8.0";
+const VERSION = "8.1";
 const NATIVE = /M4zk1pL4yCinema/.test(navigator.userAgent);
 const BR = window.AndroidBridge || null;
 const HAS = k => !!(BR && typeof BR[k] === "function");
@@ -580,7 +583,7 @@ const $$ = (s,r)=> Array.from((r||document).querySelectorAll(s));
 
 const S = {
   view:"feed", theme:"dark", autoplay:true, quality:"auto", showCont:true, dubOnly:false,
-  lang:"id", user:null, feedOffset:0, feedLoading:false, feedDone:false,
+  lang:"id", user:null, feedOffset:0, feedLoading:false, feedDone:false, feedLastSync:0,
   favs:[], hist:[], dls:[], sHist:[], searchTimer:null, progressTimer:0, pool:[],
   playerMode:"", inApp:NATIVE
 };
@@ -719,6 +722,7 @@ function go(view){
   if(view === "me")   renderMe();
   if(view === "dl")   renderDls();
   if(view === "explore" && !$("#exploreBody").dataset.init) initExplore();
+  if(view === "feed" && Date.now() - S.feedLastSync > 15 * 60 * 1000) loadFeed(true);
 }
 
 function feedSkeleton(n){
@@ -741,12 +745,15 @@ async function loadFeed(reset){
   try{
     const j = await getHome(S.feedOffset);
     clearSkel();
-    let items = j.data || [];
-    if(S.dubOnly) items = items.filter(x=> isDub(x.name));
-    if(!items.length) S.feedDone = true;
+    const pageItems = Array.isArray(j.data) ? j.data : [];
+    const seen = new Set(S.pool.map(x=>String(x.id)));
+    const fresh = pageItems.filter(x=>x && x.id && !seen.has(String(x.id)));
+    const items = S.dubOnly ? fresh.filter(x=>isDub(x.name)) : fresh;
+    if(!pageItems.length || !fresh.length) S.feedDone = true;
     items.forEach((it,i)=>{ S.pool.push(it); $("#feedList").appendChild(feedCard(it, S.feedOffset + i)); });
-    S.feedOffset += (j.data || []).length;
-    if((j.data||[]).length < 6) S.feedDone = true;
+    S.feedOffset += pageItems.length;
+    if(pageItems.length < 6) S.feedDone = true;
+    if(reset) S.feedLastSync = Date.now();
     if(!$("#feedList").children.length) emptyFeed();
     if(reset) injectContinueCard();
   }catch(e){
@@ -1827,6 +1834,12 @@ window.__back = function(){
 function init(){
   restoreSession(); loadUserData();
 
+  $("#feedRefresh").onclick = ()=>{
+    if(S.feedLoading) return;
+    toast("Memperbarui katalog drama...");
+    loadFeed(true);
+  };
+
   $("#spBtn").onclick = ()=>{
     const sp = $("#splash");
     sp.style.transition = "opacity .35s, transform .35s";
@@ -1883,6 +1896,7 @@ function init(){
 
   document.addEventListener("visibilitychange", ()=>{
     if(document.visibilityState !== "visible") return;
+    if(S.view === "feed" && Date.now() - S.feedLastSync > 15 * 60 * 1000) loadFeed(true);
     const v = $("#pvideo");
     if(v && v.src && v.paused && v.currentTime > 0 && !v.ended) v.play().catch(()=>{});
   });
