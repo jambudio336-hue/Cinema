@@ -11,9 +11,13 @@ android {
         applicationId = "com.mazkiplay.cinema"
         minSdk = 23
         targetSdk = 35
-        versionCode = 81
-        versionName = "8.1"
-        resValue("string", "build_version", "8.1")
+        versionCode = 82
+        versionName = "8.2"
+        resValue("string", "build_version", "8.2")
+        val meloloToken = providers.gradleProperty("MELOLO_TOKEN")
+            .orElse(providers.environmentVariable("MELOLO_TOKEN"))
+            .getOrElse("")
+        buildConfigField("String", "MELOLO_TOKEN", "\"$meloloToken\"")
     }
 
     buildFeatures { buildConfig = true }
