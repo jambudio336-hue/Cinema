@@ -9,8 +9,8 @@ permissions:
   contents: write
 
 concurrency:
-  group: cinema-android-build-${{ github.ref }}
-  cancel-in-progress: true
+  group: cinema-android-build-${{ github.run_id }}
+  cancel-in-progress: false
 
 jobs:
   build:
