@@ -18,7 +18,7 @@ import android.webkit.PermissionRequest
 import android.webkit.URLUtil
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
-import android.webkit.WebResourceError
+import androidx.webkit.WebResourceErrorCompat
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
@@ -161,15 +161,15 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onReceivedError(
-                view: WebView?,
-                request: WebResourceRequest?,
-                error: WebResourceError?
+                view: WebView,
+                request: WebResourceRequest,
+                error: WebResourceErrorCompat
             ) {
                 super.onReceivedError(view, request, error)
-                if (request?.isForMainFrame == true) {
+                if (request.isForMainFrame) {
                     bar.visibility = View.GONE
                     errorBox.visibility = View.VISIBLE
-                    Log.w(TAG, "main frame error: ${error?.description}")
+                    Log.w(TAG, "main frame error: ${error.description}")
                 }
             }
         }
@@ -240,7 +240,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onConsoleMessage(msg: android.webkit.ConsoleMessage?): Boolean {
-                Log.d(TAG, "[${msg?.messageLevel}] ${msg?.message()} @${msg?.lineNumber()}")
+                Log.d(TAG, "[${msg?.messageLevel()}] ${msg?.message()} @${msg?.lineNumber()}")
                 return true
             }
         }
