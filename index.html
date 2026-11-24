@@ -32,7 +32,6 @@ input{font:inherit}
 ::selection{background:var(--acc);color:#fff}
 ::-webkit-scrollbar{width:0;height:0}
 
-/* ---------- SPLASH ---------- */
 #splash{position:fixed;inset:0;z-index:999;display:flex;flex-direction:column;align-items:center;
   justify-content:center;gap:16px;text-align:center;overflow-y:auto;
   padding:calc(env(safe-area-inset-top) + 30px) 26px calc(env(safe-area-inset-bottom) + 30px);
@@ -60,7 +59,6 @@ input{font:inherit}
 .sp-note{font-size:11px;color:#716b87;position:relative;z-index:1;animation:up .7s .42s both}
 @keyframes up{from{opacity:0;transform:translateY(16px)}}
 
-/* ---------- SHELL ---------- */
 #app{min-height:100dvh;display:flex;flex-direction:column}
 #views{flex:1;position:relative;min-height:0}
 .view{display:none;height:100dvh;min-height:560px;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
@@ -83,7 +81,6 @@ html[data-theme="light"] .topbar{background:linear-gradient(to bottom,rgba(247,2
 html[data-theme="light"] .icon-btn{background:rgba(0,0,0,.035)}
 .icon-btn svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 
-/* ---------- FEED ---------- */
 #v-feed{padding:0;scroll-snap-type:y mandatory;scroll-padding-bottom:var(--nav)}
 .feed-card{position:relative;height:100dvh;min-height:560px;scroll-snap-align:start;scroll-snap-stop:always;
   display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden;background:var(--card)}
@@ -143,7 +140,6 @@ html[data-theme="light"] #contBar{background:rgba(255,255,255,.96)}
 #contBar .go{width:37px;height:37px;border-radius:50%;background:var(--grad);display:grid;place-items:center;flex:none;box-shadow:var(--glow)}
 #contBar .go svg{width:14px;height:14px;fill:#fff;stroke:none;margin-left:2px}
 
-/* ---------- SECTIONS ---------- */
 .sec{padding:20px 0 4px}
 .sec-hd{display:flex;align-items:baseline;gap:8px;padding:0 16px 12px}
 .sec-hd h3{font-size:16.5px;font-weight:900;letter-spacing:-.4px}
@@ -152,7 +148,6 @@ html[data-theme="light"] #contBar{background:rgba(255,255,255,.96)}
 .rail{display:flex;gap:11px;overflow-x:auto;padding:2px 16px 14px;scroll-snap-type:x proximity}
 .rail::-webkit-scrollbar{display:none}
 
-/* ---------- POSTER ---------- */
 .pcard{flex:none;width:118px;scroll-snap-align:start;text-align:left;position:relative;transition:transform .15s}
 .pcard:active{transform:scale(.965)}
 .pcard .ph{position:relative;width:100%;aspect-ratio:336/478;border-radius:16px;overflow:hidden;
@@ -202,7 +197,6 @@ html[data-theme="light"] .pcard .ph{border-color:rgba(0,0,0,.06)}
   background-size:220% 100%;animation:shim 1.3s infinite linear;border-radius:14px}
 @keyframes shim{to{background-position:-220% 0}}
 
-/* ---------- NAV ---------- */
 #nav{position:fixed;left:0;right:0;bottom:0;z-index:60;display:flex;
   height:calc(var(--nav) + env(safe-area-inset-bottom));padding-bottom:env(safe-area-inset-bottom);
   background:rgba(10,9,17,.92);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
@@ -216,13 +210,11 @@ html[data-theme="light"] #nav{background:rgba(255,255,255,.95)}
 .nav-item.on svg{stroke-width:2.3;transform:translateY(-1px)}
 .nav-item:active{transform:scale(.93)}
 
-/* ---------- SHEETS ---------- */
 .sheet{position:fixed;inset:0;z-index:120;background:var(--bg);display:none;flex-direction:column;
   overflow-y:auto;overscroll-behavior:contain}
 .sheet.open{display:flex;animation:slideIn .28s cubic-bezier(.3,.9,.3,1)}
 @keyframes slideIn{from{transform:translateY(26px);opacity:0}}
 
-/* ---------- DETAIL ---------- */
 .d-hero{position:relative;flex:none;min-height:350px;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
 .d-bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;filter:blur(3px) brightness(.5);transform:scale(1.08)}
 .d-shade{position:absolute;inset:0;background:linear-gradient(to top,var(--bg) 1%,rgba(8,7,13,.85) 42%,rgba(8,7,13,.28) 100%)}
@@ -272,7 +264,6 @@ html[data-theme="light"] #nav{background:rgba(255,255,255,.95)}
 .ep-dl.done{color:var(--ok);border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.12)}
 .ep-dl:active{transform:scale(.9)}
 
-/* ---------- PLAYER ---------- */
 #player{background:#000;overflow:hidden;display:none;flex-direction:column}
 #player.open{display:flex}
 .p-wrap{position:relative;flex:1;display:grid;place-items:center;min-height:0;background:#000;touch-action:pan-y}
@@ -305,13 +296,13 @@ html[data-theme="light"] #nav{background:rgba(255,255,255,.95)}
 #pSound.on{display:flex}
 #pSound svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 
-.p-buf{position:absolute;inset:0;z-index:7;display:none;place-items:center;background:rgba(0,0,0,.5)}
+.p-buf{position:absolute;inset:0;z-index:7;display:none;place-items:center;pointer-events:none}
 .p-buf.on{display:grid}
-.spin{width:44px;height:44px;border-radius:50%;border:3px solid rgba(255,255,255,.22);
-  border-top-color:#fff;animation:sp .8s linear infinite}
+.spin{width:46px;height:46px;border-radius:50%;border:3px solid rgba(255,255,255,.2);
+  border-top-color:#fff;animation:sp .8s linear infinite;box-shadow:0 0 18px rgba(0,0,0,.6)}
 @keyframes sp{to{transform:rotate(360deg)}}
 
-.p-fail{position:absolute;inset:0;z-index:8;display:none;place-items:center;background:rgba(0,0,0,.88);
+.p-fail{position:absolute;inset:0;z-index:8;display:none;place-items:center;background:rgba(0,0,0,.9);
   text-align:center;padding:26px}
 .p-fail.on{display:grid}
 .p-fail h4{color:#fff;font-size:15px;font-weight:900;margin-bottom:6px}
@@ -339,7 +330,6 @@ html[data-theme="light"] #nav{background:rgba(255,255,255,.95)}
 .p-eps-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:13px}
 .p-eps-hd h4{font-size:14.5px;font-weight:900}
 
-/* ---------- PROFIL ---------- */
 .prof{padding:calc(env(safe-area-inset-top) + 28px) 16px 20px;text-align:center}
 .prof-av{width:80px;height:80px;border-radius:50%;background:var(--grad);display:grid;place-items:center;
   font-size:31px;font-weight:900;color:#fff;margin:0 auto 12px;box-shadow:0 18px 44px -14px rgba(255,47,109,.9)}
@@ -371,7 +361,6 @@ html[data-theme="light"] #nav{background:rgba(255,255,255,.95)}
 .ver{text-align:center;font-size:11px;color:var(--tx3);
   padding:24px 16px calc(var(--nav) + env(safe-area-inset-bottom) + 24px);line-height:1.8}
 
-/* auth */
 .auth{padding:calc(env(safe-area-inset-top) + 32px) 22px calc(var(--nav) + env(safe-area-inset-bottom) + 32px);
   max-width:430px;margin:0 auto;width:100%}
 .auth-logo{width:64px;height:64px;border-radius:20px;background:var(--grad);display:grid;place-items:center;
@@ -598,7 +587,6 @@ const saveHist = ()=> localStorage.setItem(K("hist"), JSON.stringify(S.hist.slic
 const saveDl   = ()=> localStorage.setItem(K("dl"),   JSON.stringify(S.dls.slice(0,200)));
 const saveSh   = ()=> localStorage.setItem(K("sh"),   JSON.stringify(S.sHist.slice(0,12)));
 
-/* ---------- akun ---------- */
 function getUsers(){ try{ return JSON.parse(localStorage.getItem(K_USERS) || "[]"); }catch(e){ return []; } }
 function putUsers(u){ localStorage.setItem(K_USERS, JSON.stringify(u)); }
 const hash = s => btoa(unescape(encodeURIComponent("mz$" + s)));
@@ -637,7 +625,6 @@ function logout(){
   loadUserData();
 }
 
-/* ---------- WhatsApp ---------- */
 function buildWaText(u){
   const dev = navigator.userAgent.replace(/\(.*?\)/g,"").trim().slice(0,60);
   return "*PENDAFTARAN BARU — M4zk1pL4y Cinema*\n━━━━━━━━━━━━━━\n" +
@@ -652,7 +639,6 @@ function kirimWa(u){
   return !!w;
 }
 
-/* ---------- util ---------- */
 const esc = s => String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function toast(msg){
   const t = $("#toast"); t.textContent = msg; t.classList.add("on");
@@ -661,7 +647,6 @@ function toast(msg){
 const fmtDur = s => { s = Math.max(0, Math.floor(s||0)); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); };
 const isDub = n => /\(dub\)/i.test(n || "");
 
-/* ---------- API (race paralel) ---------- */
 const PROXIES = [
   u => u,
   u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
@@ -687,10 +672,8 @@ async function api(path, params){
 const getHome   = off => api("/home", {lang:S.lang, offset:off, code:CODE});
 const getDetail = id  => api("/detail/" + encodeURIComponent(id), {lang:S.lang, code:CODE});
 const getSearch = q   => api("/search", {lang:S.lang, q:q});
-/* id = ID DRAMA (bukan vid) */
 const getVideo  = (dramaId, ep) => api("/video", {id:dramaId, ep:ep, code:CODE});
 
-/* ---------- router ---------- */
 function go(view){
   if(!["search","hist","dl"].includes(view)){
     $$(".nav-item").forEach(b=> b.classList.toggle("on", b.dataset.nav === view));
@@ -707,7 +690,6 @@ function go(view){
   if(view === "explore" && !$("#exploreBody").dataset.init) initExplore();
 }
 
-/* ---------- feed ---------- */
 function feedSkeleton(n){
   for(let i=0;i<n;i++){
     const d = document.createElement("article");
@@ -835,7 +817,6 @@ function renderFavs(){
     '<div class="grid">' + S.favs.map(x=> posterHTML(x)).join("") + '</div>';
   bindCards(box);
 }
-
 function pushHist(d, ep, t, dur){
   const pct = dur ? Math.min(99, Math.round(t/dur*100)) : 0;
   S.hist = S.hist.filter(h=> h.id !== d.id);
@@ -865,7 +846,6 @@ function posterHTML(it, rank){
 }
 function bindCards(root){ $$(".pcard", root).forEach(c=> c.addEventListener("click", ()=> openDetail(c.dataset.id))); }
 
-/* ---------- jelajah ---------- */
 const CATS = ["Cinta","CEO","Nikah","Balas Dendam","Reinkarnasi","Miskin","Kontrak","Selir","Pewaris","Taipan"];
 function initExplore(){
   $("#exploreBody").dataset.init = "1";
@@ -923,7 +903,6 @@ async function runExplore(q){
   }
 }
 
-/* ---------- pencarian ---------- */
 let searchReq = 0;
 async function doSearch(q){
   const box = $("#searchBody");
@@ -955,7 +934,6 @@ async function doSearch(q){
   }
 }
 
-/* ---------- detail ---------- */
 let detailData = null, pendingEp = 0, pendingSeek = 0;
 
 async function openDetail(id, ep, seek){
@@ -1060,7 +1038,6 @@ function shareItem(it){
   toast(url);
 }
 
-/* ---------- unduhan ---------- */
 const isDownloaded = ep => S.dls.some(d=> d.id === (detailData && detailData.id) && d.ep === ep);
 async function downloadEp(detail, ep, btn){
   if(isDownloaded(ep)){ toast("Sudah diunduh"); return; }
@@ -1131,20 +1108,18 @@ function renderDls(){
 /* ================= PLAYER ================= */
 let vData = null, vEp = 1, curDetail = null, seekTo = 0;
 const speeds = [1,.75,1.25,1.5,2]; let spIdx = 0;
-let srcQueue = [], srcIdx = 0, proxyMode = false, refetchN = 0, watchdog = null, lastT = 0;
+let qList = [], qIdx = 0, tries = [], tIdx = 0, refetchN = 0;
+let wd = null, stall = null, bufT = null, lastT = 0;
 let subMode = "off", subCues = [];
 
-const VPROXY = [
-  u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
-  u => "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(u)
-];
+const VPROXY = u => "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(u);
 
 function playEpisode(ep, seek){
   if(!detailData) return;
   const v = (detailData.videos||[]).find(x=> x.episode === ep) || (detailData.videos||[])[0];
   if(!v){ toast("Episode tidak tersedia"); return; }
   vEp = v.episode; curDetail = detailData; seekTo = seek || 0;
-  srcQueue = []; srcIdx = 0; proxyMode = false; refetchN = 0; subCues = [];
+  qList = []; qIdx = 0; tries = []; tIdx = 0; refetchN = 0; subCues = [];
   openPlayer(v.episode);
 }
 
@@ -1166,9 +1141,9 @@ function openPlayer(ep){
       '<div class="p-center"><button class="p-big hide" id="pBig"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg></button></div>' +
       '<div class="p-buf" id="pBuf"><div class="spin"></div></div>' +
       '<div class="p-fail" id="pFail"><div><h4>Video gagal dimuat</h4>' +
-        '<p>Koneksi lambat atau sumber sedang sibuk. Coba salah satu opsi di bawah.</p>' +
+        '<p id="pFailMsg">Koneksi lambat atau sumber sedang sibuk.</p>' +
         '<div class="fbtns"><button id="pRetry">Coba Lagi</button>' +
-        '<button class="gh" id="pLower">Kualitas Rendah</button>' +
+        '<button class="gh" id="pLower">Kualitas Terendah</button>' +
         '<button class="gh" id="pTab">Buka Tab Baru</button></div></div></div>' +
       '<button id="pSound"><svg viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M16 9l4 6M20 9l-4 6"/></svg> Ketuk untuk suara</button>' +
       '<div class="p-bot">' +
@@ -1195,10 +1170,10 @@ function openPlayer(ep){
   $("#pPrev").onclick = ()=> step(-1);
   $("#pNext").onclick = ()=> step(1);
   $("#pDl").onclick = ()=> downloadEp(curDetail, vEp, null);
-  $("#pRetry").onclick = ()=>{ refetchN = 0; proxyMode = false; loadSource(vEp); };
+  $("#pRetry").onclick = ()=>{ refetchN = 0; loadSource(vEp); };
   $("#pLower").onclick = ()=>{ S.quality = "240p"; saveSet(); loadSource(vEp); };
   $("#pTab").onclick = ()=>{
-    const u = (vData && vData.videoUrl) || srcQueue[0];
+    const u = (vData && vData.videoUrl) || (tries[tIdx-1] && tries[tIdx-1].u);
     if(u) window.open(u, "_blank", "noopener"); else toast("Sumber belum siap");
   };
   $("#pPip").onclick = async ()=>{
@@ -1245,7 +1220,11 @@ function openPlayer(ep){
     const f = $("#pFill"), c = $("#pCur");
     if(f && video.duration) f.style.width = (video.currentTime/video.duration*100) + "%";
     if(c) c.textContent = fmtDur(video.currentTime);
-    if(video.currentTime !== lastT){ lastT = video.currentTime; armWatchdog(); }
+    if(video.currentTime !== lastT){
+      lastT = video.currentTime;
+      clearTimeout(wd); clearTimeout(stall);
+      stall = setTimeout(()=>{ if(video.readyState < 3) retrySame(); }, 15000);
+    }
     renderSub(video.currentTime);
     if(Date.now() - S.progressTimer > 4000 && video.duration){
       S.progressTimer = Date.now();
@@ -1257,17 +1236,20 @@ function openPlayer(ep){
     $("#pDur").textContent = fmtDur(video.duration);
     if(seekTo > 0 && seekTo < video.duration - 3) video.currentTime = seekTo;
     video.playbackRate = speeds[spIdx];
-    setBuf(false);
   });
-  video.addEventListener("waiting", ()=> setBuf(true));
-  video.addEventListener("playing", ()=> setBuf(false));
-  video.addEventListener("canplay", ()=> setBuf(false));
+  video.addEventListener("loadeddata", hideBuf);
+  video.addEventListener("canplay", hideBuf);
+  video.addEventListener("playing", ()=>{
+    hideBuf();
+    clearTimeout(wd);
+    $("#pBig").classList.add("hide");
+  });
+  video.addEventListener("waiting", showBuf);
   video.addEventListener("ended", ()=>{
     pushHist(curDetail, vEp, video.duration, video.duration);
     const has = (curDetail.videos||[]).some(v=> v.episode === vEp + 1);
     if(S.autoplay && has) step(1); else toast("Selesai");
   });
-  video.addEventListener("play", ()=> $("#pBig").classList.add("hide"));
   video.addEventListener("pause", ()=> $("#pBig").classList.remove("hide"));
 
   $("#pBig").onclick = ()=>{
@@ -1296,71 +1278,95 @@ function openPlayer(ep){
   loadSource(ep);
 }
 
-const setBuf = on => { const b = $("#pBuf"); if(b) b.classList.toggle("on", !!on); };
-const failOn = on => { const f = $("#pFail"); if(f) f.classList.toggle("on", !!on); };
-
-function armWatchdog(){
-  clearTimeout(watchdog);
-  watchdog = setTimeout(()=>{
-    const v = $("#pvideo");
-    if(v && !v.paused && v.readyState < 3) nextSource();
-  }, 12000);
+function showBuf(){
+  clearTimeout(bufT);
+  bufT = setTimeout(()=>{ const b = $("#pBuf"); if(b) b.classList.add("on"); }, 500);
 }
+function hideBuf(){
+  clearTimeout(bufT);
+  const b = $("#pBuf"); if(b) b.classList.remove("on");
+}
+const failOn = (on,msg)=>{
+  const f = $("#pFail"); if(!f) return;
+  f.classList.toggle("on", !!on);
+  if(msg) $("#pFailMsg").textContent = msg;
+};
 
 async function loadSource(ep){
-  setBuf(true); failOn(false);
-  clearTimeout(watchdog);
+  showBuf(); failOn(false);
+  clearTimeout(wd); clearTimeout(stall);
   try{
     const j = await getVideo(curDetail.id, ep);
     vData = j;
-    const ql = (j.qualityList||[]).slice().sort((a,b)=> parseInt(b.label) - parseInt(a.label));
-    if(!ql.length) throw new Error("kosong");
-    let order = ql;
+    const all = (j.qualityList||[]).slice().sort((a,b)=> parseInt(b.label) - parseInt(a.label));
+    if(!all.length) throw new Error("kosong");
+    let order;
     if(S.quality !== "auto"){
-      const pref = ql.find(q=> q.label === S.quality);
-      if(pref) order = [pref, ...ql.filter(q=> q !== pref)];
+      const p = all.find(q=> q.label === S.quality);
+      order = p ? [p, ...all.filter(q=> q !== p)] : all;
+    }else{
+      const p = all.find(q=> q.label === "480p") || all.find(q=> q.label === "360p") || all[all.length-1];
+      order = [p, ...all.filter(q=> q !== p)];
     }
-    srcQueue = order.map(q=> q.url);
-    srcIdx = 0; proxyMode = false;
-    $("#pQual").textContent = order[0].label;
-    playCurrent();
-  }catch(e){ failOn(true); setBuf(false); }
+    qList = order; qIdx = 0;
+    startQuality();
+  }catch(e){
+    hideBuf();
+    failOn(true, "Sumber video tidak merespons. Coba lagi atau buka di tab baru.");
+  }
 }
 
-function playCurrent(){
+function startQuality(){
+  if(qIdx >= qList.length) return exhausted();
+  const q = qList[qIdx];
+  $("#pQual").textContent = q.label;
+  tries = [
+    { u:q.url, ref:"no-referrer" },
+    { u:q.url, ref:"" },
+    { u:VPROXY(q.url), ref:"no-referrer" }
+  ];
+  tIdx = 0;
+  playNext();
+}
+
+function playNext(){
   const v = $("#pvideo");
   if(!v) return;
-  if(srcIdx >= srcQueue.length) return exhausted();
-  const url = srcQueue[srcIdx++];
-  v.onerror = ()=> nextSource();
-  v.src = url;
-  v.load();
+  clearTimeout(wd);
+  if(tIdx >= tries.length){ qIdx++; return startQuality(); }
+  const t = tries[tIdx++];
+  try{ v.referrerPolicy = t.ref; }catch(e){}
+  v.onerror = ()=> playNext();
+  v.src = t.u;
+  showBuf();
   const pr = v.play();
-  if(pr && pr.catch){
-    pr.catch(()=>{
-      /* autoplay diblokir → coba mute lalu tampilkan tombol */
-      v.muted = true;
-      const p2 = v.play();
-      if(p2 && p2.catch) p2.catch(()=> $("#pBig").classList.remove("hide"));
-      $("#pSound").classList.add("on");
-    });
-  }
-  setBuf(true);
-  armWatchdog();
+  if(pr && pr.catch) pr.catch(()=>{
+    v.muted = true;
+    $("#pSound").classList.add("on");
+    v.play().catch(()=>{});
+  });
+  wd = setTimeout(()=>{ if(v.readyState < 3) playNext(); }, 9000);
 }
-function nextSource(){ if($("#pvideo")) playCurrent(); }
+
+function retrySame(){
+  const v = $("#pvideo");
+  if(!v) return;
+  const cur = tries[tIdx-1];
+  if(!cur) return playNext();
+  try{ v.referrerPolicy = cur.ref; }catch(e){}
+  v.src = cur.u;
+  v.play().catch(()=>{});
+  showBuf();
+}
 
 function exhausted(){
-  if(!proxyMode && srcQueue.length){
-    proxyMode = true;
-    const base = srcQueue.slice();
-    srcQueue = [];
-    base.forEach(u=> VPROXY.forEach(p=> srcQueue.push(p(u))));
-    srcIdx = 0;
-    return playCurrent();
+  if(refetchN < 2){
+    refetchN++;
+    setTimeout(()=> loadSource(vEp), 900);
+    return;
   }
-  if(refetchN < 2){ refetchN++; setTimeout(()=> loadSource(vEp), 800); return; }
-  failOn(true); setBuf(false);
+  hideBuf();
+  failOn(true, "Semua sumber gagal dimuat. Coba lagi, turunkan kualitas, atau buka di tab baru.");
 }
 
 function openQuality(){
@@ -1372,16 +1378,12 @@ function openQuality(){
   const next = labels[(labels.indexOf(cur) + 1) % labels.length];
   if(next === "auto"){ S.quality = "auto"; saveSet(); toast("Kualitas: Auto"); loadSource(vEp); return; }
   S.quality = next; saveSet();
-  $("#pQual").textContent = next;
   loadSource(vEp);
 }
 
-/* ---------- subtitle (hanya file sendiri) ---------- */
 function cycleCC(){
-  if(subMode === "off"){
-    subMode = "vtt";
-    if(!subCues.length) $("#subFile").click();
-  } else subMode = "off";
+  if(subMode === "off"){ subMode = "vtt"; if(!subCues.length) $("#subFile").click(); }
+  else subMode = "off";
   applyCC();
 }
 function applyCC(){
@@ -1422,7 +1424,7 @@ function step(dir){
   playEpisode(target, (hh && hh.ep === target) ? (hh.t||0) : 0);
 }
 function closePlayer(){
-  clearTimeout(watchdog);
+  clearTimeout(wd); clearTimeout(stall); clearTimeout(bufT);
   const v = $("#pvideo");
   if(v){
     if(v.duration) pushHist(curDetail, vEp, v.currentTime, v.duration);
@@ -1473,7 +1475,7 @@ function renderMe(){
       '<button class="row danger" id="meLogout"><span class="ic"><svg viewBox="0 0 24 24"><path d="M15 4h3a1 1 0 011 1v14a1 1 0 01-1 1h-3"/><path d="M10 8l-4 4 4 4M6 12h9"/></svg></span>' +
         '<span class="tx"><b>Keluar</b><small>Logout akun</small></span></button>' +
     '</div>' +
-    '<div class="ver">M4zk1pL4y Cinema v4.0<br>by.mazkiplay · data tersimpan di perangkat</div>';
+    '<div class="ver">M4zk1pL4y Cinema v5.0<br>by.mazkiplay · data tersimpan di perangkat</div>';
 
   $$("#meBody [data-go]").forEach(b=> b.onclick = ()=> go(b.dataset.go));
   $$("#meBody [data-toggle]").forEach(b=> b.onclick = ()=>{
@@ -1570,7 +1572,6 @@ function renderEdit(){
   };
 }
 
-/* ================= INIT ================= */
 function init(){
   restoreSession(); loadUserData();
 
