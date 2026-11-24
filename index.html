@@ -569,14 +569,15 @@ html[data-theme="light"] #nav{background:rgba(255,255,255,.95)}
 "use strict";
 
 const API  = "https://melolo.goodbos.online/api";
-const CODE = "947C4EDB6F923EAC1F55A8B5A73B3B65";
 const WA_NUM = "6285262965282";
 const WEB_BASE = "https://jambudio336-hue.github.io/Cinema/";
 const K_USERS = "mz_users", K_SESS = "mz_session";
-const VERSION = "8.1";
+const VERSION = "8.2";
 const NATIVE = /M4zk1pL4yCinema/.test(navigator.userAgent);
 const BR = window.AndroidBridge || null;
 const HAS = k => !!(BR && typeof BR[k] === "function");
+// Token disuntikkan saat build melalui GitHub Actions Secret, tidak disimpan di source HTML.
+const CODE = HAS("meloloToken") ? String(BR.meloloToken() || "").trim() : "";
 
 const $  = (s,r)=> (r||document).querySelector(s);
 const $$ = (s,r)=> Array.from((r||document).querySelectorAll(s));
@@ -689,11 +690,12 @@ const PROXIES = [
 const withTimeout = (p,ms)=> Promise.race([p, new Promise((_,r)=> setTimeout(()=> r(new Error("t")), ms))]);
 
 async function api(path, params){
+  if((path === "/home" || path.startsWith("/detail/") || path === "/video") && !CODE) throw new Error("token_missing");
   const qs = params ? "?" + new URLSearchParams(params).toString() : "";
   const url = API + path + qs;
   const tries = PROXIES.map(p => (async () => {
     const r = await withTimeout(fetch(p(url), {headers:{"Accept":"application/json"}}), 7000);
-    if(!r.ok) throw new Error("http");
+    if(!r.ok) throw new Error("http " + r.status);
     const j = JSON.parse(await r.text());
     if(!j || (j.code !== 0 && j.code !== 200)) throw new Error("api");
     return j;
@@ -704,7 +706,7 @@ async function api(path, params){
 
 const getHome   = off => api("/home", {lang:S.lang, offset:off, code:CODE});
 const getDetail = id  => api("/detail/" + encodeURIComponent(id), {lang:S.lang, code:CODE});
-const getSearch = q   => api("/search", {lang:S.lang, q:q});
+const getSearch = q   => api("/search", {lang:S.lang, q:q}); // Endpoint search mengikuti dokumentasi: lang + q.
 const getVideo  = (dramaId, ep) => api("/video", {id:dramaId, ep:ep, code:CODE});
 
 /* ---------- nav ---------- */
