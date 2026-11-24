@@ -24,6 +24,7 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
@@ -88,12 +89,29 @@ class PlayerActivity : AppCompatActivity() {
             .setConnectTimeoutMs(15000)
             .setReadTimeoutMs(30000)
 
-        player = ExoPlayer.Builder(this)
+        val renderersFactory = DefaultRenderersFactory(this)
+            .setEnableDecoderFallback(true)
+        player = ExoPlayer.Builder(this, renderersFactory)
             .setMediaSourceFactory(DefaultMediaSourceFactory(httpFactory))
             .build()
         playerView.player = player
 
         player.addListener(object : Player.Listener {
+            override fun onTracksChanged(tracks: androidx.media3.common.Tracks) {
+                val videoTracks = tracks.groups.filter {
+                    it.type == androidx.media3.common.C.TRACK_TYPE_VIDEO
+                }
+                videoTracks.forEach { group ->
+                    for (index in 0 until group.length) {
+                        val format = group.getTrackFormat(index)
+                        Log.i(TAG, "Video track: mime=${format.sampleMimeType}, codecs=${format.codecs}, size=${format.width}x${format.height}")
+                    }
+                }
+                if (videoTracks.isEmpty()) {
+                    Log.e(TAG, "Stream tidak menyediakan video track; kemungkinan URL/format stream salah")
+                }
+            }
+
             override fun onPlaybackStateChanged(state: Int) {
                 if (state == Player.STATE_READY) {
                     retries = 0
@@ -108,7 +126,9 @@ class PlayerActivity : AppCompatActivity() {
             }
 
             override fun onPlayerError(error: PlaybackException) {
-                Log.e(TAG, "Playback error: ${error.errorCodeName}", error)
+                val cause = generateSequence<Throwable>(error) { it.cause }
+                    .joinToString(" <- ") { "${it.javaClass.simpleName}: ${it.message}" }
+                Log.e(TAG, "Playback error: ${error.errorCodeName}; cause=$cause", error)
                 if (retries < 1 && !isFinishing) {
                     retries++
                     val resumeAt = player.currentPosition.coerceAtLeast(0L)
