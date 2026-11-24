@@ -11,9 +11,9 @@ android {
         applicationId = "com.mazkiplay.cinema"
         minSdk = 23
         targetSdk = 35
-        versionCode = 83
-        versionName = "8.3"
-        resValue("string", "build_version", "8.3")
+        versionCode = 84
+        versionName = "8.4"
+        resValue("string", "build_version", "8.4")
         val meloloToken = providers.gradleProperty("MELOLO_TOKEN")
             .orElse(providers.environmentVariable("MELOLO_TOKEN"))
             .getOrElse("")
