@@ -20,3 +20,13 @@ Manual build: `gradle :app:assembleDebug`.
 - `app/src/main/kotlin/com/mazkiplay/cinema/`: Android activities and JavaScript bridge.
 - `app/src/main/res/`: Android resources used by the APK.
 - `tools/make-icons.sh`: generates launcher icon density assets from `kiplay.png`.
+
+
+## Live catalog and episode updates
+
+- The catalog uses the upstream `/home` endpoint with offset pagination; scrolling the feed loads additional pages instead of bundling a fixed catalog into the APK.
+- Drama detail and episode metadata are fetched from the API whenever a title is opened, so new episodes appear when the upstream provider publishes them.
+- The home feed refreshes when the app returns to the feed after 15 minutes, when the app becomes active after 15 minutes, or when the refresh icon is tapped.
+- Feed pages are deduplicated by drama ID to avoid showing the same title twice when upstream pages overlap.
+
+The catalog and playable media are supplied by the configured upstream provider. The APK does not host or copy video files. Availability, regional restrictions, and publishing cadence therefore depend on that provider and on the rights to distribute the content.
