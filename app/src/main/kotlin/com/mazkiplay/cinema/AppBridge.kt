@@ -11,6 +11,32 @@ class AppBridge(
 ) {
 
     @JavascriptInterface
+    fun playVideo(
+        dramaId: String,
+        title: String,
+        cover: String,
+        ep: Int,
+        qualitiesJson: String,
+        url: String,
+        startSec: Int,
+        autoplay: Int,
+        quality: String
+    ) {
+        val intent = Intent(activity, PlayerActivity::class.java).apply {
+            putExtra(PlayerActivity.EXTRA_URL, url)
+            putExtra(PlayerActivity.EXTRA_TITLE, title)
+            putExtra(PlayerActivity.EXTRA_EP, ep)
+            putExtra(PlayerActivity.EXTRA_START, startSec.coerceAtLeast(0) * 1000L)
+            putExtra(PlayerActivity.EXTRA_QUALITIES, qualitiesJson)
+            putExtra(PlayerActivity.EXTRA_AUTOPLAY, autoplay != 0)
+            putExtra(PlayerActivity.EXTRA_QUALITY, quality)
+        }
+        activity.runOnUiThread {
+            if (!activity.isFinishing) activity.startActivity(intent)
+        }
+    }
+
+    @JavascriptInterface
     fun download(url: String, name: String) = activity.enqueueDownload(url, name)
 
     @JavascriptInterface

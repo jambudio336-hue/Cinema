@@ -39,7 +39,8 @@ class MainActivity : AppCompatActivity() {
     companion object {
         const val HOST = "appassets.androidplatform.net"
         const val START_URL = "https://$HOST/assets/index.html"
-        const val UA_TAG = " M4zk1pL4yCinema/7.0"
+        const val UA_TAG = " M4zk1pL4yCinema/8.0"
+        @Volatile var instance: MainActivity? = null
         private const val TAG = "CinemaWeb"
     }
 
@@ -95,6 +96,7 @@ class MainActivity : AppCompatActivity() {
 
         setupWebView()
         setupBack()
+        instance = this
 
         if (savedInstanceState == null) webView.loadUrl(START_URL)
         else webView.restoreState(savedInstanceState)
@@ -297,6 +299,12 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    fun evalJs(js: String) {
+        runOnUiThread {
+            if (::webView.isInitialized && !isFinishing) webView.evaluateJavascript(js, null)
+        }
+    }
+
     fun keepAwake(on: Boolean) {
         runOnUiThread {
             if (on) window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
@@ -349,17 +357,16 @@ class MainActivity : AppCompatActivity() {
 
     override fun onPause() {
         webView.onPause()
-        webView.pauseTimers()
         super.onPause()
     }
 
     override fun onResume() {
         super.onResume()
-        webView.resumeTimers()
         webView.onResume()
     }
 
     override fun onDestroy() {
+        if (instance === this) instance = null
         webView.removeJavascriptInterface("AndroidBridge")
         webView.destroy()
         super.onDestroy()

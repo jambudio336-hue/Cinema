@@ -570,7 +570,7 @@ const CODE = "947C4EDB6F923EAC1F55A8B5A73B3B65";
 const WA_NUM = "6285262965282";
 const WEB_BASE = "https://jambudio336-hue.github.io/Cinema/";
 const K_USERS = "mz_users", K_SESS = "mz_session";
-const VERSION = "7.0";
+const VERSION = "8.0";
 const NATIVE = /M4zk1pL4yCinema/.test(navigator.userAgent);
 const BR = window.AndroidBridge || null;
 const HAS = k => !!(BR && typeof BR[k] === "function");
@@ -1213,8 +1213,43 @@ function playEpisode(ep, seek){
   if(!v){ toast("Episode tidak tersedia"); return; }
   vEp = v.episode; curDetail = detailData; seekTo = seek || 0;
   qList = []; qIdx = 0; tries = []; tIdx = 0; refetchN = 0; subCues = [];
+  // APK selalu memakai mesin ExoPlayer; HTML5 dipakai pada versi web.
+  if(HAS("playVideo")){ nativePlay(v.episode, seek || 0); return; }
   openPlayer(v.episode);
 }
+
+async function nativePlay(ep, seek){
+  try{
+    const j = await getVideo(curDetail.id, ep);
+    const ql = (j.qualityList||[]).slice().sort((a,b)=> parseInt(b.label) - parseInt(a.label));
+    if(!ql.length) throw new Error("qualityList kosong");
+    const pref = S.quality === "auto"
+      ? (ql.find(q=> q.label === "480p") || ql[ql.length-1])
+      : (ql.find(q=> q.label === S.quality) || ql[0]);
+    if(!pref || !pref.url) throw new Error("URL video kosong");
+    pushHist(curDetail, ep, seek || 0, 0);
+    updateContBar();
+    BR.playVideo(curDetail.id, curDetail.title, curDetail.cover, ep,
+      JSON.stringify(ql), pref.url, Math.floor(seek || 0), S.autoplay ? 1 : 0, pref.label);
+  }catch(e){
+    console.error("Native player preparation failed:", e);
+    toast("Gagal menyiapkan video. Periksa sumber episode.");
+  }
+}
+
+window.__nativeProgress = (ep, pos, dur)=>{
+  if(curDetail) { pushHist(curDetail, ep, pos, dur); updateContBar(); }
+};
+window.__nativeEnded = (ep)=>{
+  if(!curDetail) return;
+  const has = (curDetail.videos||[]).some(v=> v.episode === ep + 1);
+  if(S.autoplay && has) playEpisode(ep + 1, 0);
+  else { toast("Selesai"); closePlayer(); }
+};
+window.__nativeClosed = (ep, pos, dur)=>{
+  if(curDetail && dur > 0) pushHist(curDetail, ep, pos, dur);
+  closePlayer();
+};
 
 function openPlayer(ep){
   const p = $("#player");
@@ -1225,7 +1260,7 @@ function openPlayer(ep){
   p.innerHTML =
     '<div class="p-wrap" id="pWrap">' +
       '<video id="pvideo" playsinline webkit-playsinline x5-playsinline x5-video-player-type="h5" ' +
-        'preload="metadata" referrerpolicy="no-referrer"' + (S.playerMode === "native" ? ' controls' : '') + '></video>' +
+        'preload="metadata"' + (S.playerMode === "native" ? ' controls' : '') + '></video>' +
       '<div class="p-top">' +
         '<button class="icon-btn" id="pBack"><svg viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg></button>' +
         '<div class="t" id="pTitle">Episode ' + ep + '</div>' +
@@ -1666,7 +1701,7 @@ function renderMe(){
         '<span class="tx"><b>Kualitas Video</b><small>Default pemutaran</small></span>' +
         '<span class="val">' + (S.quality === "auto" ? "Auto" : S.quality) + '</span></button>' +
       '<button class="row" data-toggle="playerMode"><span class="ic"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M10 20h4"/></svg></span>' +
-        '<span class="tx"><b>Mode Pemutar</b><small>Native = paling kompatibel di APK</small></span>' +
+        '<span class="tx"><b>Mode Pemutar</b><small>APK memakai ExoPlayer Android</small></span>' +
         '<span class="val">' + (S.playerMode === "native" ? "Native" : "Kustom") + '</span></button>' +
       '<button class="row" id="meWa"><span class="ic"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 01-13 8L3 21l1-5a9 9 0 1117-4z"/></svg></span>' +
         '<span class="tx"><b>Kirim Data ke Admin</b><small>WhatsApp ' + WA_NUM + '</small></span></button>' +
@@ -1687,7 +1722,7 @@ function renderMe(){
     if(t === "theme"){ S.theme = S.theme === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = S.theme; saveSet(); }
     if(t === "autoplay"){ S.autoplay = !S.autoplay; saveSet(); }
     if(t === "quality"){ const o = ["auto","720p","540p","480p","360p"]; S.quality = o[(o.indexOf(S.quality)+1)%o.length]; saveSet(); }
-    if(t === "playerMode"){ S.playerMode = S.playerMode === "native" ? "custom" : "native"; saveSet(); }
+    if(t === "playerMode"){ if(NATIVE){ S.playerMode = "native"; toast("APK memakai ExoPlayer Android"); } else { S.playerMode = S.playerMode === "native" ? "custom" : "native"; } saveSet(); }
     renderMe();
   });
   $("#meWa").onclick = ()=>{ const ok = kirimWa(S.user); toast(ok ? "Membuka WhatsApp admin..." : "Izinkan popup untuk mengirim"); };
