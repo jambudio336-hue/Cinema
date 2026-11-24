@@ -72,10 +72,6 @@ class AppBridge(
     @JavascriptInterface
     fun share(text: String, url: String) = activity.share(text, url)
 
-    /** Token API disediakan dari konfigurasi build, bukan dari HTML/repository. */
-    @JavascriptInterface
-    fun meloloToken(): String = BuildConfig.MELOLO_TOKEN
-
     @JavascriptInterface
     fun version(): String = BuildConfig.VERSION_NAME
 
