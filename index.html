@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
 <meta name="theme-color" content="#08070d">
+<meta name="color-scheme" content="dark">
 <title>M4zk1pL4y Cinema</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -265,7 +266,6 @@ html[data-theme="light"] #nav{background:rgba(255,255,255,.95)}
 .ep-dl.done{color:var(--ok);border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.12)}
 .ep-dl:active{transform:scale(.9)}
 
-/* ===== PLAYER v6 ===== */
 #player{background:#000;overflow:hidden;display:none;flex-direction:column}
 #player.open{display:flex}
 #player:fullscreen{height:100dvh}
@@ -566,8 +566,12 @@ html[data-theme="light"] #nav{background:rgba(255,255,255,.95)}
 const API  = "https://melolo.goodbos.online/api";
 const CODE = "947C4EDB6F923EAC1F55A8B5A73B3B65";
 const WA_NUM = "6285262965282";
+const WEB_BASE = "https://jambudio336-hue.github.io/Cinema/";
 const K_USERS = "mz_users", K_SESS = "mz_session";
-const VERSION = "6.0";
+const VERSION = "7.0";
+const NATIVE = /M4zk1pL4yCinema/.test(navigator.userAgent);
+const BR = window.AndroidBridge || null;
+const HAS = k => !!(BR && typeof BR[k] === "function");
 
 const $  = (s,r)=> (r||document).querySelector(s);
 const $$ = (s,r)=> Array.from((r||document).querySelectorAll(s));
@@ -576,9 +580,9 @@ const S = {
   view:"feed", theme:"dark", autoplay:true, quality:"auto", showCont:true, dubOnly:false,
   lang:"id", user:null, feedOffset:0, feedLoading:false, feedDone:false,
   favs:[], hist:[], dls:[], sHist:[], searchTimer:null, progressTimer:0, pool:[],
-  playerMode:"", inApp:false
+  playerMode:"", inApp:NATIVE
 };
-S.inApp = /;\s*wv\)|M4zk1pL4yCinema|Version\/[\d.]+.*Mobile Safari/i.test(navigator.userAgent);
+document.documentElement.dataset.native = NATIVE ? "1" : "0";
 
 const uk = ()=> "mz_" + (S.user ? S.user.u : "g") + "_";
 const K  = n => uk() + n;
@@ -595,7 +599,7 @@ function loadUserData(){
   if(typeof st.dubOnly === "boolean") S.dubOnly = st.dubOnly;
   if(st.lang) S.lang = st.lang;
   if(st.playerMode) S.playerMode = st.playerMode;
-  if(!S.playerMode) S.playerMode = S.inApp ? "native" : "custom";
+  if(!S.playerMode) S.playerMode = NATIVE ? "native" : "custom";
   document.documentElement.dataset.theme = S.theme;
 }
 function saveSet(){
@@ -655,12 +659,14 @@ function buildWaText(u){
 }
 function kirimWa(u){
   const url = "https://wa.me/" + WA_NUM + "?text=" + encodeURIComponent(buildWaText(u));
+  if(HAS("openUrl")){ try{ BR.openUrl(url); return true; }catch(e){} }
   const w = window.open(url, "_blank");
   return !!w;
 }
 
 const esc = s => String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function toast(msg){
+  if(HAS("toast")){ try{ BR.toast(msg); }catch(e){} }
   const t = $("#toast"); if(!t) return;
   t.textContent = msg; t.classList.add("on");
   clearTimeout(t._t); t._t = setTimeout(()=> t.classList.remove("on"), 2200);
@@ -752,7 +758,8 @@ async function loadFeed(reset){
 function emptyFeed(){
   $("#feedList").innerHTML = '<div class="feed-card"><div class="fc-body" style="padding-bottom:120px">' +
     '<div class="state"><div class="em">📡</div><h4>Tidak bisa memuat</h4>' +
-    '<p>Periksa koneksi internet kamu lalu coba lagi.</p><button onclick="location.reload()">Muat Ulang</button></div></div></div>';
+    '<p>Periksa koneksi internet kamu lalu coba lagi.</p><button id="feedRetry">Muat Ulang</button></div></div></div>';
+  const b = $("#feedRetry"); if(b) b.onclick = ()=> loadFeed(true);
 }
 function injectContinueCard(){
   $$("#feedList .feed-card.cont").forEach(c=> c.remove());
@@ -1054,14 +1061,15 @@ function renderDetail(j){
   });
 }
 function shareItem(it){
-  const url = location.origin + location.pathname + "?d=" + it.id;
-  const data = {title:"M4zk1pL4y Cinema", text:'Tonton "' + (it.name||"drama") + '" di M4zk1pL4y Cinema', url:url};
-  if(navigator.share){ navigator.share(data).catch(()=>{}); return; }
+  const url = WEB_BASE + "?d=" + it.id;
+  const text = 'Tonton "' + (it.name||"drama") + '" di M4zk1pL4y Cinema';
+  if(HAS("share")){ try{ BR.share(text, url); return; }catch(e){} }
+  if(navigator.share){ navigator.share({title:"M4zk1pL4y Cinema", text:text, url:url}).catch(()=>{}); return; }
   if(navigator.clipboard){ navigator.clipboard.writeText(url).then(()=> toast("Tautan disalin")).catch(()=> toast(url)); return; }
   toast(url);
 }
 
-/* ---------- download (v6) ---------- */
+/* ---------- download ---------- */
 const safeName = t => String(t||"drama").replace(/[^\w\s-]/g,"").trim().replace(/\s+/g,"_").slice(0,60) || "drama";
 const bustUrl = u => u + (u.includes("?") ? "&" : "?") + "_mz=" + Date.now();
 
@@ -1079,8 +1087,8 @@ async function grabBlob(url){
 }
 async function saveVideo(url, title, ep){
   const name = safeName(title) + "_Ep" + ep + ".mp4";
-  if(window.AndroidBridge && typeof AndroidBridge.download === "function"){
-    try{ AndroidBridge.download(url, name); toast("Diunduh ke folder Download"); return; }catch(e){}
+  if(HAS("download")){
+    try{ BR.download(url, name); toast("Diunduh ke folder Download"); return; }catch(e){}
   }
   const b = await grabBlob(url);
   const file = (typeof File === "function") ? new File([b], name, {type:"video/mp4"}) : null;
@@ -1155,7 +1163,7 @@ function renderDls(){
   });
 }
 
-/* ================= PLAYER v6 ================= */
+/* ================= PLAYER v7 ================= */
 const V_PROXIES = [
   u => "https://test.cors.workers.dev/?" + u,
   u => "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(u),
@@ -1163,13 +1171,28 @@ const V_PROXIES = [
   u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u)
 ];
 const REF_VARIANTS = ["no-referrer","origin","unsafe-url"];
+const HLS_CDN = "https://cdn.jsdelivr.net/npm/hls.js@1.5.20/dist/hls.min.js";
 
 let vData = null, vEp = 1, curDetail = null, seekTo = 0;
 const speeds = [1,.75,1.25,1.5,2]; let spIdx = 0;
 let qList = [], qIdx = 0, tries = [], tIdx = 0, refetchN = 0;
 let wd = null, bufT = null, lastT = 0, srcTok = 0, curTry = null;
 let watchInt = null, lastProg = 0, lastProgAt = 0, wl = null;
-let subMode = "off", subCues = [];
+let subMode = "off", subCues = [], hls = null, hlsLoading = null;
+
+function loadHls(){
+  if(window.Hls) return Promise.resolve(window.Hls);
+  if(hlsLoading) return hlsLoading;
+  hlsLoading = new Promise((res, rej)=>{
+    const s = document.createElement("script");
+    s.src = HLS_CDN; s.async = true;
+    s.onload = ()=> window.Hls ? res(window.Hls) : rej(new Error("hls"));
+    s.onerror = ()=> rej(new Error("hls"));
+    document.head.appendChild(s);
+  });
+  return hlsLoading;
+}
+function destroyHls(){ if(hls){ try{ hls.destroy(); }catch(e){} hls = null; } }
 
 function buildAttempts(url){
   const out = [];
@@ -1258,9 +1281,7 @@ function openPlayer(ep){
   $("#pTab").onclick = ()=>{
     const u = (curTry && curTry.u) || (vData && vData.videoUrl);
     if(!u){ toast("Sumber belum siap"); return; }
-    if(window.AndroidBridge && typeof AndroidBridge.openPlayer === "function"){
-      try{ AndroidBridge.openPlayer(u); return; }catch(e){}
-    }
+    if(HAS("openPlayer")){ try{ BR.openPlayer(u); return; }catch(e){} }
     window.open(u, "_blank", "noopener");
   };
   $("#pPip").onclick = async ()=>{
@@ -1373,24 +1394,18 @@ function setMode(m){
   const b = $("#pMode"); if(b) b.textContent = m === "native" ? "Kustom" : "Native";
   const b2 = $("#pModeN"); if(b2) b2.textContent = "Mode: " + (m === "native" ? "Native" : "Kustom");
   toast(m === "native" ? "Mode native aktif" : "Mode kustom aktif");
-  const cur = v && v.currentTime;
-  if(cur) v.currentTime = cur;
 }
 
 function toggleFs(){
   const el = $("#pWrap") || $("#player");
   const v = $("#pvideo");
-  const doc = document;
-  if(doc.fullscreenElement || doc.webkitFullscreenElement){
-    (doc.exitFullscreen || doc.webkitExitFullscreen || function(){}).call(doc);
-    try{ screen.orientation && screen.orientation.unlock && screen.orientation.unlock(); }catch(e){}
+  if(document.fullscreenElement || document.webkitFullscreenElement){
+    (document.exitFullscreen || document.webkitExitFullscreen || function(){}).call(document);
     return;
   }
   const req = el.requestFullscreen || el.webkitRequestFullscreen;
   if(req){
-    Promise.resolve(req.call(el)).then(()=>{
-      try{ screen.orientation && screen.orientation.lock && screen.orientation.lock("landscape"); }catch(e){}
-    }).catch(()=> fallbackFs(v));
+    Promise.resolve(req.call(el)).catch(()=> fallbackFs(v));
   } else fallbackFs(v);
 }
 function fallbackFs(v){
@@ -1416,7 +1431,7 @@ const failOn = (on,msg)=>{
 
 async function loadSource(ep){
   showBuf(); failOn(false);
-  clearTimeout(wd);
+  clearTimeout(wd); destroyHls();
   try{
     const j = await getVideo(curDetail.id, ep);
     vData = j;
@@ -1451,7 +1466,7 @@ function pickQuality(){
   attempt();
 }
 
-function attempt(){
+async function attempt(){
   const v = $("#pvideo");
   if(!v) return;
   if(tIdx >= tries.length){ qIdx++; return pickQuality(); }
@@ -1459,8 +1474,29 @@ function attempt(){
   const tok = ++srcTok;
   curTry = t;
   clearTimeout(wd);
+  destroyHls();
+  const url = t.kind === "direct" ? bustUrl(t.u) : t.u;
+  const isHls = /\.m3u8(\?|$)/i.test(url);
+
+  if(isHls){
+    try{ await loadHls(); }catch(e){}
+    if(srcTok !== tok) return;
+    if(window.Hls && window.Hls.isSupported()){
+      try{
+        hls = new window.Hls({enableWorker:true, maxBufferLength:30, backBufferLength:30});
+        hls.on(window.Hls.Events.ERROR, (_, data)=>{ if(data && data.fatal && srcTok === tok) attempt(); });
+        hls.on(window.Hls.Events.MANIFEST_PARSED, ()=>{ if(srcTok === tok) v.play().catch(()=>{}); });
+        hls.attachMedia(v);
+        hls.loadSource(url);
+        showBuf();
+        wd = setTimeout(()=>{ if(srcTok === tok && v.readyState < 2) attempt(); }, 16000);
+        return;
+      }catch(e){ destroyHls(); }
+    }
+  }
+
   try{ v.referrerPolicy = t.ref; }catch(e){}
-  v.src = t.kind === "direct" ? bustUrl(t.u) : t.u;
+  v.src = url;
   try{ v.load(); }catch(e){}
   v.onerror = ()=>{ if(srcTok === tok) attempt(); };
   const wdMs = t.kind === "direct" ? 8000 : 16000;
@@ -1479,6 +1515,7 @@ function attempt(){
 
 function retrySame(){
   const v = $("#pvideo"); if(!v || !curTry) return;
+  destroyHls();
   const tok = ++srcTok;
   try{ v.referrerPolicy = curTry.ref; }catch(e){}
   v.src = curTry.kind === "direct" ? bustUrl(curTry.u) : curTry.u;
@@ -1513,9 +1550,7 @@ function startWatch(){
 function stopWatch(){ if(watchInt){ clearInterval(watchInt); watchInt = null; } }
 
 async function wake(on){
-  if(window.AndroidBridge && typeof AndroidBridge.keepAwake === "function"){
-    try{ AndroidBridge.keepAwake(!!on); }catch(e){}
-  }
+  if(HAS("keepAwake")){ try{ BR.keepAwake(!!on); }catch(e){} }
   try{
     if(on){
       if("wakeLock" in navigator && !wl){
@@ -1531,8 +1566,8 @@ function openQuality(){
   const list = vData.qualityList.slice().sort((a,b)=> parseInt(b.label) - parseInt(a.label));
   const labels = list.map(q=> q.label);
   if(S.quality !== "auto") labels.unshift("auto");
-  const cur = (list.find(q=> q.label === $("#pQual").textContent) ? $("#pQual").textContent : "auto");
-  const next = labels[(labels.indexOf(cur) + 1) % labels.length] || "auto";
+  const curLbl = ($("#pQual") && $("#pQual").textContent) || "auto";
+  const next = labels[(labels.indexOf(curLbl) + 1) % labels.length] || "auto";
   if(next === "auto"){ S.quality = "auto"; saveSet(); toast("Kualitas: Auto"); loadSource(vEp); return; }
   S.quality = next; saveSet(); toast("Kualitas: " + next);
   loadSource(vEp);
@@ -1582,7 +1617,7 @@ function step(dir){
 }
 function closePlayer(){
   clearTimeout(wd); clearTimeout(bufT);
-  stopWatch(); wake(false);
+  stopWatch(); wake(false); destroyHls();
   try{ if(document.fullscreenElement) document.exitFullscreen(); }catch(e){}
   const v = $("#pvideo");
   if(v){
@@ -1638,7 +1673,9 @@ function renderMe(){
       '<button class="row danger" id="meLogout"><span class="ic"><svg viewBox="0 0 24 24"><path d="M15 4h3a1 1 0 011 1v14a1 1 0 01-1 1h-3"/><path d="M10 8l-4 4 4 4M6 12h9"/></svg></span>' +
         '<span class="tx"><b>Keluar</b><small>Logout akun</small></span></button>' +
     '</div>' +
-    '<div class="ver">M4zk1pL4y Cinema v' + VERSION + '<br>by.mazkiplay · data tersimpan di perangkat</div>';
+    '<div class="ver">M4zk1pL4y Cinema v' + VERSION + (NATIVE ? ' · APK' : ' · Web') +
+      '<br>by.mazkiplay · data tersimpan di perangkat' +
+      (NATIVE ? '<br>Bridge native: ' + (BR ? 'aktif' : 'tidak aktif') : '') + '</div>';
 
   $$("#meBody [data-go]").forEach(b=> b.onclick = ()=> go(b.dataset.go));
   $$("#meBody [data-toggle]").forEach(b=> b.onclick = ()=>{
@@ -1736,6 +1773,20 @@ function renderEdit(){
   };
 }
 
+/* ---------- back handler untuk tombol fisik ---------- */
+window.__back = function(){
+  try{
+    if(document.fullscreenElement){ document.exitFullscreen(); return 1; }
+    const panel = $("#pEpsPanel");
+    if(panel && panel.classList.contains("open")){ panel.classList.remove("open"); return 1; }
+    if($("#player").classList.contains("open")){ closePlayer(); return 1; }
+    if($("#detail").classList.contains("open")){ closeDetail(); return 1; }
+    if(S.view !== "feed"){ go("feed"); return 1; }
+    if(S.view === "feed" && $("#v-feed").scrollTop > 40){ $("#v-feed").scrollTop = 0; return 1; }
+    return 0;
+  }catch(e){ return 0; }
+};
+
 function init(){
   restoreSession(); loadUserData();
 
@@ -1793,7 +1844,6 @@ function init(){
     ev.target.value = "";
   });
 
-  /* jaga pemutaran saat layar mati/balik */
   document.addEventListener("visibilitychange", ()=>{
     if(document.visibilityState !== "visible") return;
     const v = $("#pvideo");
