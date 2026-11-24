@@ -47,18 +47,7 @@ jobs:
           test -f app/src/main/res/layout/activity_player.xml
           test -f app/src/main/kotlin/com/mazkiplay/cinema/PlayerActivity.kt
 
-      - name: Validate API credential
-        env:
-          MELOLO_TOKEN: ${{ secrets.MELOLO_TOKEN }}
-        run: |
-          if [ -z "$MELOLO_TOKEN" ]; then
-            echo "::error::GitHub Actions Secret MELOLO_TOKEN belum diatur. Tambahkan token Melolo di Settings > Secrets and variables > Actions."
-            exit 1
-          fi
-
       - name: Build debug APK
-        env:
-          MELOLO_TOKEN: ${{ secrets.MELOLO_TOKEN }}
         run: gradle :app:assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK artifact
