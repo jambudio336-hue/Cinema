@@ -42,7 +42,6 @@ class PlayerActivity : AppCompatActivity() {
         private const val UA =
             "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 " +
                 "(KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
-        private const val REFERER = "https://www.tiktok.com/"
         private const val TAG = "CinemaPlayer"
     }
 
@@ -54,6 +53,7 @@ class PlayerActivity : AppCompatActivity() {
     private var retries = 0
     private var currentUrl = ""
     private var qualities: JSONArray? = null
+    private val attemptedUrls = mutableSetOf<String>()
     private val ui = Handler(Looper.getMainLooper())
 
     private val progressTick = object : Runnable {
@@ -82,13 +82,8 @@ class PlayerActivity : AppCompatActivity() {
 
         val httpFactory = DefaultHttpDataSource.Factory()
             .setUserAgent(UA)
-            .setDefaultRequestProperties(
-                mapOf(
-                    "Referer" to REFERER,
-                    "Origin" to "https://www.tiktok.com",
-                    "Accept" to "*/*"
-                )
-            )
+            // Hindari header Referer/Origin TikTok yang tidak cocok dengan host stream.
+            .setDefaultRequestProperties(mapOf("Accept" to "*/*"))
             .setAllowCrossProtocolRedirects(true)
             .setConnectTimeoutMs(15000)
             .setReadTimeoutMs(30000)
@@ -114,17 +109,19 @@ class PlayerActivity : AppCompatActivity() {
 
             override fun onPlayerError(error: PlaybackException) {
                 Log.e(TAG, "Playback error: ${error.errorCodeName}", error)
-                if (retries < 3 && !isFinishing) {
+                if (retries < 1 && !isFinishing) {
                     retries++
                     val resumeAt = player.currentPosition.coerceAtLeast(0L)
                     ui.postDelayed(
                         { if (!isFinishing) play(currentUrl, resumeAt) },
-                        700L * retries
+                        800L
                     )
+                } else if (!isFinishing && tryNextQuality()) {
+                    retries = 0
                 } else {
                     Toast.makeText(
                         this@PlayerActivity,
-                        "Gagal memutar episode ini (HTTP / format / codec)",
+                        "Video gagal diputar: ${error.errorCodeName}. Coba kualitas lain atau periksa koneksi.",
                         Toast.LENGTH_LONG
                     ).show()
                 }
@@ -156,14 +153,34 @@ class PlayerActivity : AppCompatActivity() {
             return
         }
         currentUrl = url
+        attemptedUrls.add(url)
+        val path = uri.path.orEmpty().lowercase()
         val item = MediaItem.Builder().setUri(uri).apply {
-            if (uri.path?.endsWith(".m3u8", ignoreCase = true) == true) {
-                setMimeType(MimeTypes.APPLICATION_M3U8)
+            when {
+                path.endsWith(".m3u8") -> setMimeType(MimeTypes.APPLICATION_M3U8)
+                path.endsWith(".mpd") -> setMimeType(MimeTypes.APPLICATION_MPD)
             }
         }.build()
         player.setMediaItem(item, startMs.coerceAtLeast(0L))
         player.prepare()
         player.playWhenReady = true
+    }
+
+    /** Pindah otomatis ke URL kualitas lain jika stream pilihan gagal. */
+    private fun tryNextQuality(): Boolean {
+        val list = qualities ?: return false
+        for (index in 0 until list.length()) {
+            val item = list.optJSONObject(index) ?: continue
+            val url = item.optString("url").trim()
+            if (url.isBlank() || url in attemptedUrls) continue
+            val label = item.optString("label", "Auto")
+            qualityButton.text = label
+            Log.w(TAG, "Fallback stream ke kualitas $label")
+            play(url, 0L)
+            Toast.makeText(this, "Mencoba kualitas $label…", Toast.LENGTH_SHORT).show()
+            return true
+        }
+        return false
     }
 
     private fun showQualityMenu() {
@@ -184,6 +201,7 @@ class PlayerActivity : AppCompatActivity() {
                 val position = player.currentPosition.coerceAtLeast(0L)
                 qualityButton.text = item?.optString("label").orEmpty().ifBlank { "Auto" }
                 retries = 0
+                attemptedUrls.clear()
                 play(url, position)
             }
             true
