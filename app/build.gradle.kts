@@ -11,9 +11,9 @@ android {
         applicationId = "com.mazkiplay.cinema"
         minSdk = 23
         targetSdk = 35
-        versionCode = 82
-        versionName = "8.2"
-        resValue("string", "build_version", "8.2")
+        versionCode = 83
+        versionName = "8.3"
+        resValue("string", "build_version", "8.3")
         val meloloToken = providers.gradleProperty("MELOLO_TOKEN")
             .orElse(providers.environmentVariable("MELOLO_TOKEN"))
             .getOrElse("")
@@ -55,5 +55,6 @@ dependencies {
 
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-exoplayer-hls:1.4.1")
+    implementation("androidx.media3:media3-exoplayer-dash:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1")
 }
