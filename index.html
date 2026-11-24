@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#08070d">
 <title>M4zk1pL4y Cinema</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -264,10 +265,14 @@ html[data-theme="light"] #nav{background:rgba(255,255,255,.95)}
 .ep-dl.done{color:var(--ok);border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.12)}
 .ep-dl:active{transform:scale(.9)}
 
+/* ===== PLAYER v6 ===== */
 #player{background:#000;overflow:hidden;display:none;flex-direction:column}
 #player.open{display:flex}
-.p-wrap{position:relative;flex:1;display:grid;place-items:center;min-height:0;background:#000;touch-action:pan-y}
-#pvideo{width:100%;max-height:100%;background:#000;display:block}
+#player:fullscreen{height:100dvh}
+.p-wrap{position:relative;flex:1;display:grid;place-items:center;min-height:0;background:#000;touch-action:pan-y;overflow:hidden}
+#pvideo{width:100%;height:100%;max-height:100%;object-fit:contain;background:#000;display:block;outline:0}
+#player.native-mode #pvideo{height:auto;max-height:100%}
+#player.native-mode .p-bot,#player.native-mode .p-center,#player.native-mode #pSub{display:none!important}
 .p-top{position:absolute;top:0;left:0;right:0;z-index:5;display:flex;align-items:center;gap:8px;
   padding:calc(env(safe-area-inset-top) + 11px) 12px 26px;
   background:linear-gradient(to bottom,rgba(0,0,0,.85),transparent)}
@@ -323,6 +328,10 @@ html[data-theme="light"] #nav{background:rgba(255,255,255,.95)}
   border:1px solid rgba(255,255,255,.22);font-size:11.5px;font-weight:800;color:#fff;white-space:nowrap}
 .p-chip:active{transform:scale(.94)}
 .p-chip.on{background:var(--acc);border-color:transparent}
+.p-nbar{display:none;align-items:center;gap:7px;padding:9px 12px calc(env(safe-area-inset-bottom) + 9px);
+  background:#0a0a10;border-top:1px solid rgba(255,255,255,.1);flex:none}
+#player.native-mode .p-nbar{display:flex}
+.p-nbar .sp{flex:1}
 .p-eps{position:absolute;left:0;right:0;bottom:0;z-index:9;max-height:66%;overflow-y:auto;
   background:var(--bg2);border-radius:22px 22px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom) + 16px);
   transform:translateY(102%);transition:transform .3s cubic-bezier(.3,.9,.3,1)}
@@ -413,6 +422,11 @@ html[data-theme="light"] #nav{background:rgba(255,255,255,.95)}
   .d-inner,.d-body,.sec-hd,.chips,.hist-chips{padding-left:24px;padding-right:24px}
   .rail{padding-left:24px;padding-right:24px}
   .ep-list{max-width:640px}
+}
+@media(orientation:landscape){
+  .p-top{padding-top:calc(env(safe-area-inset-top) + 7px);padding-bottom:16px}
+  .p-bot{padding-bottom:calc(env(safe-area-inset-bottom) + 8px);padding-top:16px}
+  #pSub{bottom:76px}
 }
 @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 </style>
@@ -553,6 +567,7 @@ const API  = "https://melolo.goodbos.online/api";
 const CODE = "947C4EDB6F923EAC1F55A8B5A73B3B65";
 const WA_NUM = "6285262965282";
 const K_USERS = "mz_users", K_SESS = "mz_session";
+const VERSION = "6.0";
 
 const $  = (s,r)=> (r||document).querySelector(s);
 const $$ = (s,r)=> Array.from((r||document).querySelectorAll(s));
@@ -560,8 +575,10 @@ const $$ = (s,r)=> Array.from((r||document).querySelectorAll(s));
 const S = {
   view:"feed", theme:"dark", autoplay:true, quality:"auto", showCont:true, dubOnly:false,
   lang:"id", user:null, feedOffset:0, feedLoading:false, feedDone:false,
-  favs:[], hist:[], dls:[], sHist:[], searchTimer:null, progressTimer:0, pool:[]
+  favs:[], hist:[], dls:[], sHist:[], searchTimer:null, progressTimer:0, pool:[],
+  playerMode:"", inApp:false
 };
+S.inApp = /;\s*wv\)|M4zk1pL4yCinema|Version\/[\d.]+.*Mobile Safari/i.test(navigator.userAgent);
 
 const uk = ()=> "mz_" + (S.user ? S.user.u : "g") + "_";
 const K  = n => uk() + n;
@@ -577,10 +594,13 @@ function loadUserData(){
   if(typeof st.showCont === "boolean") S.showCont = st.showCont;
   if(typeof st.dubOnly === "boolean") S.dubOnly = st.dubOnly;
   if(st.lang) S.lang = st.lang;
+  if(st.playerMode) S.playerMode = st.playerMode;
+  if(!S.playerMode) S.playerMode = S.inApp ? "native" : "custom";
   document.documentElement.dataset.theme = S.theme;
 }
 function saveSet(){
-  localStorage.setItem(K("set"), JSON.stringify({theme:S.theme,autoplay:S.autoplay,quality:S.quality,showCont:S.showCont,dubOnly:S.dubOnly,lang:S.lang}));
+  localStorage.setItem(K("set"), JSON.stringify({theme:S.theme,autoplay:S.autoplay,quality:S.quality,
+    showCont:S.showCont,dubOnly:S.dubOnly,lang:S.lang,playerMode:S.playerMode}));
 }
 const saveFav  = ()=> localStorage.setItem(K("fav"),  JSON.stringify(S.favs.slice(0,400)));
 const saveHist = ()=> localStorage.setItem(K("hist"), JSON.stringify(S.hist.slice(0,150)));
@@ -641,12 +661,14 @@ function kirimWa(u){
 
 const esc = s => String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 function toast(msg){
-  const t = $("#toast"); t.textContent = msg; t.classList.add("on");
+  const t = $("#toast"); if(!t) return;
+  t.textContent = msg; t.classList.add("on");
   clearTimeout(t._t); t._t = setTimeout(()=> t.classList.remove("on"), 2200);
 }
 const fmtDur = s => { s = Math.max(0, Math.floor(s||0)); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); };
 const isDub = n => /\(dub\)/i.test(n || "");
 
+/* ---------- API layer ---------- */
 const PROXIES = [
   u => u,
   u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u),
@@ -674,6 +696,7 @@ const getDetail = id  => api("/detail/" + encodeURIComponent(id), {lang:S.lang, 
 const getSearch = q   => api("/search", {lang:S.lang, q:q});
 const getVideo  = (dramaId, ep) => api("/video", {id:dramaId, ep:ep, code:CODE});
 
+/* ---------- nav ---------- */
 function go(view){
   if(!["search","hist","dl"].includes(view)){
     $$(".nav-item").forEach(b=> b.classList.toggle("on", b.dataset.nav === view));
@@ -1038,6 +1061,39 @@ function shareItem(it){
   toast(url);
 }
 
+/* ---------- download (v6) ---------- */
+const safeName = t => String(t||"drama").replace(/[^\w\s-]/g,"").trim().replace(/\s+/g,"_").slice(0,60) || "drama";
+const bustUrl = u => u + (u.includes("?") ? "&" : "?") + "_mz=" + Date.now();
+
+async function grabBlob(url){
+  const cands = [url, ...V_PROXIES.map(p=> p(bustUrl(url)))];
+  for(const u of cands){
+    try{
+      const r = await fetch(u, {referrerPolicy:"no-referrer"});
+      if(!r.ok) continue;
+      const b = await r.blob();
+      if(b.size > 4096) return b;
+    }catch(e){}
+  }
+  throw new Error("dl");
+}
+async function saveVideo(url, title, ep){
+  const name = safeName(title) + "_Ep" + ep + ".mp4";
+  if(window.AndroidBridge && typeof AndroidBridge.download === "function"){
+    try{ AndroidBridge.download(url, name); toast("Diunduh ke folder Download"); return; }catch(e){}
+  }
+  const b = await grabBlob(url);
+  const file = (typeof File === "function") ? new File([b], name, {type:"video/mp4"}) : null;
+  if(file && navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file], title:name}); return; }catch(e){}
+  }
+  const o = URL.createObjectURL(b);
+  const a = document.createElement("a");
+  a.href = o; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=> URL.revokeObjectURL(o), 60000);
+}
+
 const isDownloaded = ep => S.dls.some(d=> d.id === (detailData && detailData.id) && d.ep === ep);
 async function downloadEp(detail, ep, btn){
   if(isDownloaded(ep)){ toast("Sudah diunduh"); return; }
@@ -1050,20 +1106,14 @@ async function downloadEp(detail, ep, btn){
     const pick = ql.find(q=> q.label === "720p") || ql[0];
     S.dls.unshift({id:detail.id, ep:ep, name:detail.title, cover:detail.cover, q:pick.label, url:pick.url, ts:Date.now()});
     saveDl();
+    await saveVideo(pick.url, detail.title, ep);
     if(btn){ btn.classList.add("done"); btn.style.opacity = "1"; }
     toast("Tersimpan · Ep " + ep + " (" + pick.label + ")");
-    saveBlob(pick.url, detail.title, ep);
     if(S.view === "dl") renderDls();
   }catch(e){
     if(btn) btn.style.opacity = "1";
-    toast("Gagal mengunduh episode ini");
+    toast("Gagal mengunduh · coba buka di pemutar luar");
   }
-}
-function saveBlob(url, title, ep){
-  const name = (title || "drama").replace(/[^\w\s-]/g,"").trim().replace(/\s+/g,"_").slice(0,60) + "_Ep" + ep + ".mp4";
-  const a = document.createElement("a");
-  a.href = url; a.download = name; a.target = "_blank"; a.rel = "noopener";
-  document.body.appendChild(a); a.click(); a.remove();
 }
 async function downloadAll(detail, vids){
   const todo = vids.filter(v=> !S.dls.some(d=> d.id === detail.id && d.ep === v.episode));
@@ -1076,7 +1126,7 @@ async function downloadAll(detail, vids){
       if(!ql.length) continue;
       const pick = ql.find(q=> q.label === "480p") || ql[0];
       S.dls.unshift({id:detail.id, ep:v.episode, name:detail.title, cover:detail.cover, q:pick.label, url:pick.url, ts:Date.now()});
-      saveDl(); saveBlob(pick.url, detail.title, v.episode);
+      saveDl(); await saveVideo(pick.url, detail.title, v.episode);
       await new Promise(r=> setTimeout(r, 700));
     }catch(e){}
   }
@@ -1100,19 +1150,37 @@ function renderDls(){
   $$("#dlBody .acts button").forEach(b=> b.onclick = ()=>{
     const a = b.dataset.a, i = +b.dataset.i, d = S.dls[i];
     if(a === "open") openDetail(d.id, d.ep, 0);
-    if(a === "save") saveBlob(d.url, d.name, d.ep);
+    if(a === "save") saveVideo(d.url, d.name, d.ep).then(()=> toast("File disimpan")).catch(()=> toast("Gagal menyimpan file"));
     if(a === "del"){ S.dls.splice(i,1); saveDl(); renderDls(); toast("Dihapus"); }
   });
 }
 
-/* ================= PLAYER ================= */
+/* ================= PLAYER v6 ================= */
+const V_PROXIES = [
+  u => "https://test.cors.workers.dev/?" + u,
+  u => "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(u),
+  u => "https://corsproxy.io/?url=" + encodeURIComponent(u),
+  u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u)
+];
+const REF_VARIANTS = ["no-referrer","origin","unsafe-url"];
+
 let vData = null, vEp = 1, curDetail = null, seekTo = 0;
 const speeds = [1,.75,1.25,1.5,2]; let spIdx = 0;
 let qList = [], qIdx = 0, tries = [], tIdx = 0, refetchN = 0;
-let wd = null, stall = null, bufT = null, lastT = 0;
+let wd = null, bufT = null, lastT = 0, srcTok = 0, curTry = null;
+let watchInt = null, lastProg = 0, lastProgAt = 0, wl = null;
 let subMode = "off", subCues = [];
 
-const VPROXY = u => "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(u);
+function buildAttempts(url){
+  const out = [];
+  const securePage = location.protocol === "https:";
+  const insecureSrc = /^http:/i.test(url);
+  if(!(securePage && insecureSrc)){
+    REF_VARIANTS.forEach(r => out.push({u:url, ref:r, kind:"direct"}));
+  }
+  V_PROXIES.forEach(p => out.push({u:p(bustUrl(url)), ref:"no-referrer", kind:"proxy"}));
+  return out;
+}
 
 function playEpisode(ep, seek){
   if(!detailData) return;
@@ -1126,16 +1194,19 @@ function playEpisode(ep, seek){
 function openPlayer(ep){
   const p = $("#player");
   p.classList.add("open");
-  vData = null; lastT = 0;
+  p.classList.toggle("native-mode", S.playerMode === "native");
+  vData = null; lastT = 0; srcTok = 0; curTry = null;
   $("#contBar").classList.remove("on");
   p.innerHTML =
     '<div class="p-wrap" id="pWrap">' +
-      '<video id="pvideo" playsinline preload="auto" webkit-playsinline referrerpolicy="no-referrer"></video>' +
+      '<video id="pvideo" playsinline webkit-playsinline x5-playsinline x5-video-player-type="h5" ' +
+        'preload="metadata" referrerpolicy="no-referrer"' + (S.playerMode === "native" ? ' controls' : '') + '></video>' +
       '<div class="p-top">' +
         '<button class="icon-btn" id="pBack"><svg viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7"/></svg></button>' +
         '<div class="t" id="pTitle">Episode ' + ep + '</div>' +
         '<button class="icon-btn" id="pDl"><svg viewBox="0 0 24 24"><path d="M12 4v10M8 10l4 4 4-4"/><path d="M5 19h14"/></svg></button>' +
         '<button class="icon-btn" id="pPip"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="12" y="12" width="7" height="6" rx="1"/></svg></button>' +
+        '<button class="icon-btn" id="pFs"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>' +
       '</div>' +
       '<div id="pSub"></div>' +
       '<div class="p-center"><button class="p-big hide" id="pBig"><svg viewBox="0 0 24 24"><path d="M6 4l14 8-14 8z"/></svg></button></div>' +
@@ -1144,7 +1215,8 @@ function openPlayer(ep){
         '<p id="pFailMsg">Koneksi lambat atau sumber sedang sibuk.</p>' +
         '<div class="fbtns"><button id="pRetry">Coba Lagi</button>' +
         '<button class="gh" id="pLower">Kualitas Terendah</button>' +
-        '<button class="gh" id="pTab">Buka Tab Baru</button></div></div></div>' +
+        '<button class="gh" id="pNative">Mode Native</button>' +
+        '<button class="gh" id="pTab">Buka di Luar</button></div></div></div>' +
       '<button id="pSound"><svg viewBox="0 0 24 24"><path d="M11 5L6 9H3v6h3l5 4z"/><path d="M16 9l4 6M20 9l-4 6"/></svg> Ketuk untuk suara</button>' +
       '<div class="p-bot">' +
         '<div class="p-bar" id="pBar"><i id="pFill"></i></div>' +
@@ -1153,28 +1225,43 @@ function openPlayer(ep){
           '<button class="p-chip" id="pSpeed">1x</button>' +
           '<button class="p-chip" id="pQual">Auto</button>' +
           '<button class="p-chip" id="pCC">CC</button>' +
+          '<button class="p-chip" id="pMode">Native</button>' +
           '<span class="sp"></span>' +
           '<button class="p-chip" id="pPrev">‹</button>' +
           '<button class="p-chip" id="pNext">›</button>' +
           '<button class="p-chip" id="pEps">Ep</button>' +
         '</div>' +
       '</div>' +
-      '<div class="p-eps" id="pEpsPanel"><div class="p-eps-hd"><h4>Episode</h4>' +
-        '<button class="icon-btn" id="pEpsClose"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
-        '<div class="ep-list" id="pEpsList"></div></div>' +
-    '</div>';
+    '</div>' +
+    '<div class="p-nbar" id="pNativeBar">' +
+      '<button class="p-chip" id="pModeN">Mode: Native</button>' +
+      '<span class="sp"></span>' +
+      '<button class="p-chip" id="pQualN">Auto</button>' +
+      '<button class="p-chip" id="pEpsN">Ep</button>' +
+    '</div>' +
+    '<div class="p-eps" id="pEpsPanel"><div class="p-eps-hd"><h4>Episode</h4>' +
+      '<button class="icon-btn" id="pEpsClose"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
+      '<div class="ep-list" id="pEpsList"></div></div>';
 
   $("#pBack").onclick = closePlayer;
-  $("#pEps").onclick = ()=> $("#pEpsPanel").classList.add("open");
+  $("#pEps").onclick = $("#pEpsN").onclick = ()=> $("#pEpsPanel").classList.add("open");
   $("#pEpsClose").onclick = ()=> $("#pEpsPanel").classList.remove("open");
   $("#pPrev").onclick = ()=> step(-1);
   $("#pNext").onclick = ()=> step(1);
   $("#pDl").onclick = ()=> downloadEp(curDetail, vEp, null);
   $("#pRetry").onclick = ()=>{ refetchN = 0; loadSource(vEp); };
   $("#pLower").onclick = ()=>{ S.quality = "240p"; saveSet(); loadSource(vEp); };
+  $("#pNative").onclick = ()=> setMode("native");
+  $("#pMode").onclick = ()=> setMode(S.playerMode === "native" ? "custom" : "native");
+  $("#pModeN").onclick = ()=> setMode(S.playerMode === "native" ? "custom" : "native");
+  $("#pFs").onclick = toggleFs;
   $("#pTab").onclick = ()=>{
-    const u = (vData && vData.videoUrl) || (tries[tIdx-1] && tries[tIdx-1].u);
-    if(u) window.open(u, "_blank", "noopener"); else toast("Sumber belum siap");
+    const u = (curTry && curTry.u) || (vData && vData.videoUrl);
+    if(!u){ toast("Sumber belum siap"); return; }
+    if(window.AndroidBridge && typeof AndroidBridge.openPlayer === "function"){
+      try{ AndroidBridge.openPlayer(u); return; }catch(e){}
+    }
+    window.open(u, "_blank", "noopener");
   };
   $("#pPip").onclick = async ()=>{
     const v = $("#pvideo");
@@ -1186,10 +1273,10 @@ function openPlayer(ep){
   };
   $("#pSpeed").onclick = ()=>{
     spIdx = (spIdx + 1) % speeds.length;
-    $("#pvideo").playbackRate = speeds[spIdx];
+    const v = $("#pvideo"); if(v) v.playbackRate = speeds[spIdx];
     $("#pSpeed").textContent = speeds[spIdx] + "x";
   };
-  $("#pQual").onclick = openQuality;
+  $("#pQual").onclick = $("#pQualN").onclick = openQuality;
   $("#pCC").onclick = cycleCC;
   $("#pSound").onclick = ()=>{
     const v = $("#pvideo");
@@ -1220,11 +1307,7 @@ function openPlayer(ep){
     const f = $("#pFill"), c = $("#pCur");
     if(f && video.duration) f.style.width = (video.currentTime/video.duration*100) + "%";
     if(c) c.textContent = fmtDur(video.currentTime);
-    if(video.currentTime !== lastT){
-      lastT = video.currentTime;
-      clearTimeout(wd); clearTimeout(stall);
-      stall = setTimeout(()=>{ if(video.readyState < 3) retrySame(); }, 15000);
-    }
+    if(Math.abs(video.currentTime - lastProg) > 0.15){ lastProg = video.currentTime; lastProgAt = Date.now(); }
     renderSub(video.currentTime);
     if(Date.now() - S.progressTimer > 4000 && video.duration){
       S.progressTimer = Date.now();
@@ -1233,24 +1316,26 @@ function openPlayer(ep){
     }
   });
   video.addEventListener("loadedmetadata", ()=>{
-    $("#pDur").textContent = fmtDur(video.duration);
+    const d = $("#pDur"); if(d) d.textContent = fmtDur(video.duration);
     if(seekTo > 0 && seekTo < video.duration - 3) video.currentTime = seekTo;
-    video.playbackRate = speeds[spIdx];
+    if(S.playerMode !== "native") video.playbackRate = speeds[spIdx];
+    lastProgAt = Date.now();
   });
   video.addEventListener("loadeddata", hideBuf);
   video.addEventListener("canplay", hideBuf);
   video.addEventListener("playing", ()=>{
-    hideBuf();
-    clearTimeout(wd);
-    $("#pBig").classList.add("hide");
+    hideBuf(); clearTimeout(wd);
+    const b = $("#pBig"); if(b) b.classList.add("hide");
+    lastProgAt = Date.now(); wake(true);
   });
   video.addEventListener("waiting", showBuf);
+  video.addEventListener("stalled", showBuf);
   video.addEventListener("ended", ()=>{
     pushHist(curDetail, vEp, video.duration, video.duration);
     const has = (curDetail.videos||[]).some(v=> v.episode === vEp + 1);
     if(S.autoplay && has) step(1); else toast("Selesai");
   });
-  video.addEventListener("pause", ()=> $("#pBig").classList.remove("hide"));
+  video.addEventListener("pause", ()=>{ const b = $("#pBig"); if(b) b.classList.remove("hide"); });
 
   $("#pBig").onclick = ()=>{
     if(video.paused){
@@ -1274,8 +1359,45 @@ function openPlayer(ep){
     if(Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy)*1.6) step(dx < 0 ? 1 : -1);
   }, {passive:true});
 
+  startWatch();
   applyCC();
   loadSource(ep);
+}
+
+function setMode(m){
+  S.playerMode = m; saveSet();
+  const p = $("#player");
+  p.classList.toggle("native-mode", m === "native");
+  const v = $("#pvideo");
+  if(v) v.controls = (m === "native");
+  const b = $("#pMode"); if(b) b.textContent = m === "native" ? "Kustom" : "Native";
+  const b2 = $("#pModeN"); if(b2) b2.textContent = "Mode: " + (m === "native" ? "Native" : "Kustom");
+  toast(m === "native" ? "Mode native aktif" : "Mode kustom aktif");
+  const cur = v && v.currentTime;
+  if(cur) v.currentTime = cur;
+}
+
+function toggleFs(){
+  const el = $("#pWrap") || $("#player");
+  const v = $("#pvideo");
+  const doc = document;
+  if(doc.fullscreenElement || doc.webkitFullscreenElement){
+    (doc.exitFullscreen || doc.webkitExitFullscreen || function(){}).call(doc);
+    try{ screen.orientation && screen.orientation.unlock && screen.orientation.unlock(); }catch(e){}
+    return;
+  }
+  const req = el.requestFullscreen || el.webkitRequestFullscreen;
+  if(req){
+    Promise.resolve(req.call(el)).then(()=>{
+      try{ screen.orientation && screen.orientation.lock && screen.orientation.lock("landscape"); }catch(e){}
+    }).catch(()=> fallbackFs(v));
+  } else fallbackFs(v);
+}
+function fallbackFs(v){
+  try{
+    if(v && v.webkitEnterFullscreen) v.webkitEnterFullscreen();
+    else toast("Layar penuh tidak didukung");
+  }catch(e){ toast("Layar penuh tidak didukung"); }
 }
 
 function showBuf(){
@@ -1294,7 +1416,7 @@ const failOn = (on,msg)=>{
 
 async function loadSource(ep){
   showBuf(); failOn(false);
-  clearTimeout(wd); clearTimeout(stall);
+  clearTimeout(wd);
   try{
     const j = await getVideo(curDetail.id, ep);
     vData = j;
@@ -1308,53 +1430,60 @@ async function loadSource(ep){
       const p = all.find(q=> q.label === "480p") || all.find(q=> q.label === "360p") || all[all.length-1];
       order = [p, ...all.filter(q=> q !== p)];
     }
-    qList = order; qIdx = 0;
-    startQuality();
+    qList = order; qIdx = 0; tIdx = 0; refetchN = 0;
+    pickQuality();
   }catch(e){
     hideBuf();
-    failOn(true, "Sumber video tidak merespons. Coba lagi atau buka di tab baru.");
+    failOn(true, "Sumber video tidak merespons. Coba lagi atau pakai mode native.");
   }
 }
 
-function startQuality(){
-  if(qIdx >= qList.length) return exhausted();
-  const q = qList[qIdx];
-  $("#pQual").textContent = q.label;
-  tries = [
-    { u:q.url, ref:"no-referrer" },
-    { u:q.url, ref:"" },
-    { u:VPROXY(q.url), ref:"no-referrer" }
-  ];
-  tIdx = 0;
-  playNext();
+function setQualLabel(l){
+  const a = $("#pQual"); if(a) a.textContent = l;
+  const b = $("#pQualN"); if(b) b.textContent = l;
 }
 
-function playNext(){
+function pickQuality(){
+  if(qIdx >= qList.length) return exhausted();
+  const q = qList[qIdx];
+  setQualLabel(q.label);
+  tries = buildAttempts(q.url); tIdx = 0;
+  attempt();
+}
+
+function attempt(){
   const v = $("#pvideo");
   if(!v) return;
-  clearTimeout(wd);
-  if(tIdx >= tries.length){ qIdx++; return startQuality(); }
+  if(tIdx >= tries.length){ qIdx++; return pickQuality(); }
   const t = tries[tIdx++];
+  const tok = ++srcTok;
+  curTry = t;
+  clearTimeout(wd);
   try{ v.referrerPolicy = t.ref; }catch(e){}
-  v.onerror = ()=> playNext();
-  v.src = t.u;
+  v.src = t.kind === "direct" ? bustUrl(t.u) : t.u;
+  try{ v.load(); }catch(e){}
+  v.onerror = ()=>{ if(srcTok === tok) attempt(); };
+  const wdMs = t.kind === "direct" ? 8000 : 16000;
+  wd = setTimeout(()=>{ if(srcTok === tok && v.readyState < 2) attempt(); }, wdMs);
   showBuf();
   const pr = v.play();
-  if(pr && pr.catch) pr.catch(()=>{
-    v.muted = true;
-    $("#pSound").classList.add("on");
-    v.play().catch(()=>{});
+  if(pr && pr.catch) pr.catch(err=>{
+    if(srcTok !== tok) return;
+    if(err && err.name === "NotAllowedError" && !v.muted){
+      v.muted = true;
+      const s = $("#pSound"); if(s) s.classList.add("on");
+      v.play().catch(()=>{});
+    }
   });
-  wd = setTimeout(()=>{ if(v.readyState < 3) playNext(); }, 9000);
 }
 
 function retrySame(){
-  const v = $("#pvideo");
-  if(!v) return;
-  const cur = tries[tIdx-1];
-  if(!cur) return playNext();
-  try{ v.referrerPolicy = cur.ref; }catch(e){}
-  v.src = cur.u;
+  const v = $("#pvideo"); if(!v || !curTry) return;
+  const tok = ++srcTok;
+  try{ v.referrerPolicy = curTry.ref; }catch(e){}
+  v.src = curTry.kind === "direct" ? bustUrl(curTry.u) : curTry.u;
+  try{ v.load(); }catch(e){}
+  v.onerror = ()=>{ if(srcTok === tok) attempt(); };
   v.play().catch(()=>{});
   showBuf();
 }
@@ -1362,22 +1491,50 @@ function retrySame(){
 function exhausted(){
   if(refetchN < 2){
     refetchN++;
-    setTimeout(()=> loadSource(vEp), 900);
+    setTimeout(()=> loadSource(vEp), 800 * refetchN);
     return;
   }
   hideBuf();
-  failOn(true, "Semua sumber gagal dimuat. Coba lagi, turunkan kualitas, atau buka di tab baru.");
+  failOn(true, "Semua sumber gagal. Coba mode native, turunkan kualitas, atau buka di luar.");
+}
+
+function startWatch(){
+  stopWatch();
+  lastProgAt = Date.now();
+  watchInt = setInterval(()=>{
+    const v = $("#pvideo");
+    if(!v || v.paused || v.ended || !v.duration) return;
+    if(Date.now() - lastProgAt > 14000){
+      lastProgAt = Date.now();
+      retrySame();
+    }
+  }, 2500);
+}
+function stopWatch(){ if(watchInt){ clearInterval(watchInt); watchInt = null; } }
+
+async function wake(on){
+  if(window.AndroidBridge && typeof AndroidBridge.keepAwake === "function"){
+    try{ AndroidBridge.keepAwake(!!on); }catch(e){}
+  }
+  try{
+    if(on){
+      if("wakeLock" in navigator && !wl){
+        wl = await navigator.wakeLock.request("screen");
+        wl.addEventListener("release", ()=>{ wl = null; });
+      }
+    }else if(wl){ await wl.release(); wl = null; }
+  }catch(e){}
 }
 
 function openQuality(){
   if(!vData || !vData.qualityList){ toast("Kualitas belum tersedia"); return; }
   const list = vData.qualityList.slice().sort((a,b)=> parseInt(b.label) - parseInt(a.label));
-  const cur = $("#pQual").textContent;
   const labels = list.map(q=> q.label);
   if(S.quality !== "auto") labels.unshift("auto");
-  const next = labels[(labels.indexOf(cur) + 1) % labels.length];
+  const cur = (list.find(q=> q.label === $("#pQual").textContent) ? $("#pQual").textContent : "auto");
+  const next = labels[(labels.indexOf(cur) + 1) % labels.length] || "auto";
   if(next === "auto"){ S.quality = "auto"; saveSet(); toast("Kualitas: Auto"); loadSource(vEp); return; }
-  S.quality = next; saveSet();
+  S.quality = next; saveSet(); toast("Kualitas: " + next);
   loadSource(vEp);
 }
 
@@ -1424,11 +1581,14 @@ function step(dir){
   playEpisode(target, (hh && hh.ep === target) ? (hh.t||0) : 0);
 }
 function closePlayer(){
-  clearTimeout(wd); clearTimeout(stall); clearTimeout(bufT);
+  clearTimeout(wd); clearTimeout(bufT);
+  stopWatch(); wake(false);
+  try{ if(document.fullscreenElement) document.exitFullscreen(); }catch(e){}
   const v = $("#pvideo");
   if(v){
     if(v.duration) pushHist(curDetail, vEp, v.currentTime, v.duration);
-    v.pause(); v.removeAttribute("src"); v.load();
+    try{ v.pause(); }catch(e){}
+    v.removeAttribute("src"); try{ v.load(); }catch(e){}
   }
   $("#player").classList.remove("open"); $("#player").innerHTML = "";
   vData = null; updateContBar();
@@ -1468,6 +1628,9 @@ function renderMe(){
       '<button class="row" data-toggle="quality"><span class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="13" rx="2"/><path d="M8 21h8"/></svg></span>' +
         '<span class="tx"><b>Kualitas Video</b><small>Default pemutaran</small></span>' +
         '<span class="val">' + (S.quality === "auto" ? "Auto" : S.quality) + '</span></button>' +
+      '<button class="row" data-toggle="playerMode"><span class="ic"><svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="14" rx="2"/><path d="M10 20h4"/></svg></span>' +
+        '<span class="tx"><b>Mode Pemutar</b><small>Native = paling kompatibel di APK</small></span>' +
+        '<span class="val">' + (S.playerMode === "native" ? "Native" : "Kustom") + '</span></button>' +
       '<button class="row" id="meWa"><span class="ic"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 01-13 8L3 21l1-5a9 9 0 1117-4z"/></svg></span>' +
         '<span class="tx"><b>Kirim Data ke Admin</b><small>WhatsApp ' + WA_NUM + '</small></span></button>' +
       '<button class="row" id="meEdit"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16z"/></svg></span>' +
@@ -1475,7 +1638,7 @@ function renderMe(){
       '<button class="row danger" id="meLogout"><span class="ic"><svg viewBox="0 0 24 24"><path d="M15 4h3a1 1 0 011 1v14a1 1 0 01-1 1h-3"/><path d="M10 8l-4 4 4 4M6 12h9"/></svg></span>' +
         '<span class="tx"><b>Keluar</b><small>Logout akun</small></span></button>' +
     '</div>' +
-    '<div class="ver">M4zk1pL4y Cinema v5.0<br>by.mazkiplay · data tersimpan di perangkat</div>';
+    '<div class="ver">M4zk1pL4y Cinema v' + VERSION + '<br>by.mazkiplay · data tersimpan di perangkat</div>';
 
   $$("#meBody [data-go]").forEach(b=> b.onclick = ()=> go(b.dataset.go));
   $$("#meBody [data-toggle]").forEach(b=> b.onclick = ()=>{
@@ -1485,6 +1648,7 @@ function renderMe(){
     if(t === "theme"){ S.theme = S.theme === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = S.theme; saveSet(); }
     if(t === "autoplay"){ S.autoplay = !S.autoplay; saveSet(); }
     if(t === "quality"){ const o = ["auto","720p","540p","480p","360p"]; S.quality = o[(o.indexOf(S.quality)+1)%o.length]; saveSet(); }
+    if(t === "playerMode"){ S.playerMode = S.playerMode === "native" ? "custom" : "native"; saveSet(); }
     renderMe();
   });
   $("#meWa").onclick = ()=>{ const ok = kirimWa(S.user); toast(ok ? "Membuka WhatsApp admin..." : "Izinkan popup untuk mengirim"); };
@@ -1627,6 +1791,17 @@ function init(){
     };
     r.readAsText(f);
     ev.target.value = "";
+  });
+
+  /* jaga pemutaran saat layar mati/balik */
+  document.addEventListener("visibilitychange", ()=>{
+    if(document.visibilityState !== "visible") return;
+    const v = $("#pvideo");
+    if(v && v.src && v.paused && v.currentTime > 0 && !v.ended) v.play().catch(()=>{});
+  });
+  window.addEventListener("online", ()=>{
+    const v = $("#pvideo");
+    if(v && v.src && v.error) retrySame();
   });
 
   const dl = new URLSearchParams(location.search).get("d");
